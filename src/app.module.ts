@@ -4,13 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DataSource } from 'typeorm';
-import { Session } from './sessions/entities/session.entity';
-import { SessionsModule } from './sessions/sessions.module';
-import { RegistrationsModule } from './registrations/registrations.module';
-import { FormEntry } from './registrations/entities/formEntry.entity';
+import { Session } from './modules/session/entities/session.entity';
+import { SessionModule } from './modules/session/session.module';
+import { RegistrationsModule } from './modules/registration/registration.module';
+import { Registration } from './modules/registration/entities/registration.entity';
 import { User } from './modules/user/entities/user.entity';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './modules/user/user.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -22,15 +22,15 @@ import { UsersModule } from './modules/user/user.module';
       host: 'localhost',
       port: 5432,
       username: 'postgres',
-      password: 'Sasuke20',
-      database: 'postgres',
-      entities: [Session, FormEntry, User],
+      password: '',
+      database: 'violet-local',
+      entities: [Session, Registration, User],
       synchronize: true,
     }),
-    SessionsModule,
+    SessionModule,
     RegistrationsModule,
     AuthModule,
-    UsersModule,
+    UserModule,
   ],
   controllers: [AppController],
   providers: [AppService],
