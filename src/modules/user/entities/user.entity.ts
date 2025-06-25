@@ -35,6 +35,9 @@ export class User extends BaseEntity implements IUser {
   @Column({ default: false })
   isAdmin: boolean;
 
+  @Column({ type: 'timestamptz', nullable: true, default: null })
+  registeredAt?: string;
+
   @OneToMany(() => Registration, (registration) => registration.id)
   @JoinColumn({
     name: 'registrationId',

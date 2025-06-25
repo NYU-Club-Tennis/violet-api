@@ -12,4 +12,5 @@ export const env = {
     sync: !!(process.env.DB_SYNC === 'true'),
     log: !!(process.env.DB_LOG === 'true'),
   },
+  salt: +(process.env.SALT || 10),
 };
