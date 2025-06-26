@@ -12,17 +12,21 @@ import { User } from './modules/user/entities/user.entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { DatabaseModule } from './modules/database/database.module';
+import { MailModule } from './modules/mail/mail.module';
+import { LoggerModule } from './modules/logger/logger.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // Make config available throughout the app
     }),
+    LoggerModule,
     DatabaseModule,
     SessionModule,
     RegistrationsModule,
     AuthModule,
     UserModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -13,4 +13,12 @@ export const env = {
     log: !!(process.env.DB_LOG === 'true'),
   },
   salt: +(process.env.SALT || 10),
+  mail: {
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_SECURE === 'true',
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_APP_PASSWORD,
+    from: process.env.EMAIL_FROM,
+  },
 };

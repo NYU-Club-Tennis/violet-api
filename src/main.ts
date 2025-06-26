@@ -4,8 +4,8 @@ import { env } from './constants/environment.constant';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
-import bodyParser from 'body-parser';
 import { ValidationPipe } from '@nestjs/common';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -27,8 +27,9 @@ async function bootstrap() {
     methods: 'GET,PUT,PATCH,POST,DELETE',
     exposedHeaders: ['Content-Disposition', 'Retry-After'],
   });
-  app.use(bodyParser.json({ limit: '100mb' }));
-  app.use(bodyParser.urlencoded({ limit: '100mb', extended: true }));
+
+  app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ limit: '100mb', extended: true }));
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   await app.listen(env.port);
