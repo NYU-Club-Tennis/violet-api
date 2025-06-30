@@ -16,6 +16,7 @@ import {
 @Injectable()
 export class MailService {
   private transporter: nodemailer.Transporter;
+  private readonly frontendUrl: string = env.url.frontend as string;
 
   constructor(private readonly logger: AppLogger) {
     this.logger.setContext(MailService.name);
@@ -97,5 +98,52 @@ export class MailService {
     `;
 
     return this.sendMail({ to: [to], subject, html });
+  }
+
+  async sendVerificationEmail(
+    email: string,
+    token: string,
+  ): Promise<IMailResponse> {
+    const subject = 'Complete Your NYU Tennis Club Registration';
+    const verificationLink = `${this.frontendUrl}/create-profile?resetCode=${token}`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #57068c; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0;">NYU Tennis Club</h1>
+            </div>
+            <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <h2 style="color: #333; margin-top: 0;">Welcome to NYU Tennis Club!</h2>
+              <p style="color: #666; font-size: 16px; line-height: 1.5;">Thank you for signing up. To complete your registration, please click the button below:</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${verificationLink}" 
+                   style="background-color: #57068c; 
+                          color: white; 
+                          padding: 12px 30px; 
+                          text-decoration: none; 
+                          border-radius: 5px; 
+                          font-weight: bold;
+                          display: inline-block;">
+                  Complete Registration
+                </a>
+              </div>
+              
+              <p style="color: #666; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <p style="color: #666; font-size: 14px; word-break: break-all;">${verificationLink}</p>
+              
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                <p style="color: #999; font-size: 12px;">This link will expire in 24 hours. If you didn't request this verification, please ignore this email.</p>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendMail({ to: [email], subject, html });
   }
 }

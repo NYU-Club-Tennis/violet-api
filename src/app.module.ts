@@ -14,6 +14,7 @@ import { UserModule } from './modules/user/user.module';
 import { DatabaseModule } from './modules/database/database.module';
 import { MailModule } from './modules/mail/mail.module';
 import { LoggerModule } from './modules/logger/logger.module';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { LoggerModule } from './modules/logger/logger.module';
     AuthModule,
     UserModule,
     MailModule,
+    RedisModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],

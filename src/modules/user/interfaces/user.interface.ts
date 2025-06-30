@@ -13,6 +13,8 @@ export interface IUser extends IBaseEntity {
   password?: string;
   avatarUrl?: string;
   isAdmin: boolean;
+  noShowCount: number;
+  lastSignInAt?: string;
 }
 
 export type IUserCreate = Omit<IUser, 'id'>;

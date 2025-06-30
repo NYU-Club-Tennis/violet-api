@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
@@ -6,7 +6,9 @@ import { env } from 'src/constants/environment.constant';
 import { IUserCreate, IUserPaginateQuery } from '../interfaces/user.interface';
 
 import * as bcrypt from 'bcryptjs';
-import dayjs from 'dayjs';
+import { REDIS_CLIENT } from 'src/constants/redis.constant';
+import Redis from 'ioredis';
+import { AuthService } from 'src/modules/auth/services/auth.service';
 @Injectable()
 export class UserService {
   private readonly salt: number = env.salt;
@@ -16,6 +18,11 @@ export class UserService {
   ) {}
 
   async create(params: IUserCreate) {
+    // Hash the password before saving
+    if (params.password) {
+      params.password = await bcrypt.hash(params.password, this.salt);
+    }
+
     const user = await this.usersRepository.save(params);
 
     return user;
@@ -68,8 +75,26 @@ export class UserService {
   async updateLastSignInAt(id: number) {
     return this.usersRepository.update(
       { id },
-      { registeredAt: dayjs().toISOString() },
+      { lastSignInAt: new Date().toISOString() },
     );
+  }
+
+  async incrementNoShowCount(id: number) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    user.noShowCount += 1;
+    return this.usersRepository.save(user);
+  }
+
+  async resetNoShowCount(id: number) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    user.noShowCount = 0;
+    return this.usersRepository.save(user);
   }
 
   async delete(id: number) {
@@ -79,6 +104,7 @@ export class UserService {
     }
     return this.usersRepository.softRemove(user);
   }
+
   async bulkDelete(userData: User[]) {
     return this.usersRepository.softRemove(userData, { chunk: 20 });
   }

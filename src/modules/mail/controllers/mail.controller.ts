@@ -61,4 +61,17 @@ export class MailController {
   ): Promise<IMailResponse> {
     return this.mailService.sendSessionConfirmation(dto);
   }
+
+  @ApiOperation({ summary: 'Test verification email template' })
+  @ApiResponse({
+    status: 200,
+    description: 'Test email sent successfully',
+  })
+  @Post('test/verification')
+  async testVerificationEmail() {
+    return this.mailService.sendVerificationEmail(
+      'test@nyu.edu',
+      'test-token-12345',
+    );
+  }
 }

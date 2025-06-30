@@ -7,7 +7,10 @@ import {
 } from 'typeorm';
 import { Session } from '../../session/entities/session.entity';
 import { User } from 'src/modules/user/entities/user.entity';
-import { IRegistration } from '../interfaces/registration.interface';
+import {
+  IRegistration,
+  RegistrationStatus,
+} from '../interfaces/registration.interface';
 import { BaseEntity } from 'src/common/entities/base.entity';
 
 @Entity()
@@ -20,6 +23,25 @@ export class Registration extends BaseEntity implements IRegistration {
 
   @Column()
   sessionId: number;
+
+  @Column({ default: 0 })
+  position: number; // 0 = regular registration, 1+ = waitlist position
+
+  @Column({ default: 1 })
+  registrationCount: number; // Number of times user has registered for sessions
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastCancellation: Date | null;
+
+  @Column({ default: false })
+  hasAttended: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: RegistrationStatus,
+    default: RegistrationStatus.REGISTERED,
+  })
+  status: RegistrationStatus;
 
   @ManyToOne(() => Session, (session) => session.id)
   @JoinColumn({ name: 'sessionId' })
