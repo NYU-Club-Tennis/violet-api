@@ -23,7 +23,7 @@ export class User extends BaseEntity implements IUser {
   @Column()
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   phoneNumber: string;
 
   @Column()
@@ -34,6 +34,12 @@ export class User extends BaseEntity implements IUser {
 
   @Column({ default: false })
   isAdmin: boolean;
+
+  @Column({ default: 0 })
+  noShowCount: number;
+
+  @Column({ type: 'timestamptz', nullable: true, default: null })
+  lastSignInAt?: string;
 
   @OneToMany(() => Registration, (registration) => registration.id)
   @JoinColumn({

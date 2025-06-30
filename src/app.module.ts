@@ -11,30 +11,26 @@ import { Registration } from './modules/registration/entities/registration.entit
 import { User } from './modules/user/entities/user.entity';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
+import { DatabaseModule } from './modules/database/database.module';
+import { MailModule } from './modules/mail/mail.module';
+import { LoggerModule } from './modules/logger/logger.module';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // Make config available throughout the app
     }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: '',
-      database: 'violet-local',
-      entities: [Session, Registration, User],
-      synchronize: true,
-    }),
+    LoggerModule,
+    DatabaseModule,
     SessionModule,
     RegistrationsModule,
     AuthModule,
     UserModule,
+    MailModule,
+    RedisModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {
-  constructor(private dataSource: DataSource) {}
-}
+export class AppModule {}
