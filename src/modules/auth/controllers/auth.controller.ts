@@ -28,7 +28,7 @@ import {
   IAuthCreateProfileRequestDTO,
   UserSignupRequestDTO,
 } from '../dtos/auth.dto';
-import { IUserLogin } from '../interfaces/auth.interface';
+import { IAuthLoginRequest } from '../interfaces/auth.interface';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -151,7 +151,7 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: IUserLogin) {
+  async login(@Body() loginDto: IAuthLoginRequest) {
     try {
       const authResult = await this.authService.userLogin(loginDto);
       if (!authResult) {

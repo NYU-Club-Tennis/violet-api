@@ -1,8 +1,25 @@
 import { IUser } from 'src/modules/user/interfaces/user.interface';
 
+export interface IAuthLoginRequest {
+  email: string;
+  password: string;
+}
+
 export interface IUserLogin {
   email: string;
   password: string;
+}
+
+export interface IAuthCreateProfileRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+}
+
+export interface IAuthValidateCodeResponse {
+  email: string;
 }
 
 export interface IAuthUser

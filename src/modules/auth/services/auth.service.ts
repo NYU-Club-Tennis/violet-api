@@ -10,7 +10,7 @@ import Redis from 'ioredis';
 import {
   IAuthUser,
   ISignTokenPayload,
-  IUserLogin,
+  IAuthLoginRequest,
 } from '../interfaces/auth.interface';
 import { IUser } from 'src/modules/user/interfaces/user.interface';
 
@@ -140,7 +140,7 @@ export class AuthService {
     await this.redis.del(attemptsKey);
   }
 
-  async userLogin(params: IUserLogin) {
+  async userLogin(params: IAuthLoginRequest) {
     const { email, password } = params;
 
     // Check if email is banned
