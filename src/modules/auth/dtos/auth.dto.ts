@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, PickType } from '@nestjs/swagger';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { UserDTO } from 'src/modules/user/dto/users.dto';
 
@@ -92,3 +92,19 @@ export class IAuthCreateProfileRequestDTO {
   @IsNotEmpty()
   password: string;
 }
+
+export class RotateRefreshTokenDTO {
+  @ApiProperty({
+    description: 'Refresh token for renew access token. ',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    type: String,
+  })
+  @IsNotEmpty()
+  @IsString()
+  refreshToken: string;
+}
+
+export class TokenRefreshResponseDTO extends PickType(AuthResponseDTO, [
+  'token',
+  'refreshToken',
+]) {}

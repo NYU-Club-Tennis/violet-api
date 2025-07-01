@@ -24,6 +24,7 @@ export class AuthService {
   private readonly JWT_REFRESH_EXPIRATION = '7d';
   private readonly VERIFICATION_PREFIX = 'email_verification:';
   private readonly VERIFICATION_EXPIRY = 24 * 60 * 60; // 24 hours
+  private readonly TIME_SEVEN_DAYS_IN_SECONDS = 7 * 24 * 60 * 60; // 7 days in seconds
 
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
@@ -179,7 +180,7 @@ export class AuthService {
       });
 
       await this.redis.set(
-        this.getRefreshTokenKey(user.id, false),
+        this.getRefreshTokenKey(user.id),
         refreshToken,
         'EX',
         7 * 24 * 60 * 60, // 7 days in seconds
@@ -212,8 +213,8 @@ export class AuthService {
     return `reset_password:${token}`;
   }
 
-  private getRefreshTokenKey(id: number, isUser: boolean): string {
-    return `refresh_token:${isUser ? 'user' : 'player'}:${id}`;
+  private getRefreshTokenKey(id: number): string {
+    return `refresh_token:${id}`;
   }
 
   private getUserToTokenKey(email: string): string {
@@ -298,5 +299,38 @@ export class AuthService {
         break;
       }
     }
+  }
+
+  async verifyRefreshToken(refreshToken: string) {
+    return this.jwtService.verify(refreshToken, {
+      secret: env.jwt.refreshTokenSecret,
+    });
+  }
+
+  async refreshToken(refreshToken: string) {
+    const payload = await this.verifyRefreshToken(refreshToken);
+
+    const storedToken = await this.redis.get(
+      this.getRefreshTokenKey(payload.id),
+    );
+
+    if (storedToken !== refreshToken) {
+      throw new Error('Invalid refresh token');
+    }
+    const { exp: _exp, iat: _iat, ...restPayload } = payload;
+    const newAccessToken = this.jwtService.sign(restPayload);
+    const newRefreshToken = this.jwtService.sign(restPayload, {
+      expiresIn: this.JWT_REFRESH_EXPIRATION,
+      secret: env.jwt.refreshTokenSecret,
+    });
+
+    await this.redis.set(
+      this.getRefreshTokenKey(payload.id),
+      newRefreshToken,
+      'EX',
+      this.TIME_SEVEN_DAYS_IN_SECONDS,
+    );
+
+    return { token: newAccessToken, refreshToken: newRefreshToken };
   }
 }

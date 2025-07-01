@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { env } from 'src/constants/environment.constant';
@@ -26,6 +27,8 @@ import {
   AuthResponseDTO,
   AuthTokenCheckDTO,
   IAuthCreateProfileRequestDTO,
+  RotateRefreshTokenDTO,
+  TokenRefreshResponseDTO,
   UserSignupRequestDTO,
 } from '../dtos/auth.dto';
 import { IAuthLoginRequest } from '../interfaces/auth.interface';
@@ -147,6 +150,39 @@ export class AuthController {
       throw new BadRequestException(
         error.message || 'Failed to create profile',
       );
+    }
+  }
+
+  @ApiOperation({ summary: 'Refresh Token.' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Refresh Token Successfully.',
+    type: TokenRefreshResponseDTO,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Invalid or expired refresh token.',
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: 'Internal server error.',
+  })
+  @Post('refresh-token')
+  @HttpCode(HttpStatus.OK)
+  async refreshToken(
+    @Body() body: RotateRefreshTokenDTO,
+  ): Promise<TokenRefreshResponseDTO> {
+    console.log('hello');
+    try {
+      const payload = await this.authService.verifyRefreshToken(
+        body.refreshToken,
+      );
+
+      const result = await this.authService.refreshToken(body.refreshToken);
+      return result;
+    } catch (error) {
+      this.logger.error('Error refreshing token', error);
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
   }
 
