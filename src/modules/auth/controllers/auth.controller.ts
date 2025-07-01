@@ -27,6 +27,7 @@ import {
   AuthResponseDTO,
   AuthTokenCheckDTO,
   IAuthCreateProfileRequestDTO,
+  LoginDto,
   RotateRefreshTokenDTO,
   TokenRefreshResponseDTO,
   UserSignupRequestDTO,
@@ -187,7 +188,18 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() loginDto: IAuthLoginRequest) {
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({
+    status: 200,
+    description: 'User successfully logged in',
+    type: AuthResponseDTO,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid credentials or account locked',
+  })
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() loginDto: LoginDto) {
     try {
       const authResult = await this.authService.userLogin(loginDto);
       if (!authResult) {

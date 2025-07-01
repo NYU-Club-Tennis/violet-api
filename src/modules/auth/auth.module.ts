@@ -10,11 +10,12 @@ import { UserModule } from '../user/user.module';
 import { LoggerModule } from '../logger/logger.module';
 import { MailModule } from '../mail/mail.module';
 import { UserService } from '../user/services/user.service';
+import { JwtStrategy } from 'src/middleware/strategies/jwt.strategy';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
-    PassportModule,
+    PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: env.jwt.accessTokenSecret,
       signOptions: { expiresIn: '15m' },
@@ -23,8 +24,8 @@ import { UserService } from '../user/services/user.service';
     LoggerModule,
     MailModule,
   ],
-  providers: [AuthService, UserService],
+  providers: [AuthService, UserService, JwtStrategy],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}

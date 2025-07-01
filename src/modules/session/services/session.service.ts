@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Session } from '../entities/session.entity';
+import { ISession, ISessionCreate } from '../interfaces/session.interface';
 
 @Injectable()
 export class SessionService {
@@ -21,18 +22,32 @@ export class SessionService {
     return session;
   }
 
+  async findById(id: number, relations: string[] = []) {
+    return this.sessionRepository.findOneOrFail({
+      where: {
+        id,
+      },
+      relations,
+    });
+  }
+
   async deleteOne(id: number): Promise<Session> {
     const session = await this.sessionRepository.findOne({ where: { id } });
     if (!session) {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
-    const qur = this.sessionRepository.delete(id);
-
+    await this.sessionRepository.delete(id);
     return session;
   }
 
-  async create(sessionData: Partial<Session>): Promise<Session> {
-    const session = this.sessionRepository.create(sessionData);
-    return this.sessionRepository.save(session);
+  async create(sessionData: ISessionCreate) {
+    const session = await this.sessionRepository.save(sessionData);
+    return session;
+  }
+
+  async update(id: number, params: Partial<ISession>): Promise<Session> {
+    const session = await this.findById(id);
+    const updatedSession = this.sessionRepository.merge(session, params);
+    return this.sessionRepository.save(updatedSession);
   }
 }
