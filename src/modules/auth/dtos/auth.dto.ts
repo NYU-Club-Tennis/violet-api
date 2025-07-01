@@ -13,6 +13,26 @@ export class UserSignupRequestDTO {
   email: string;
 }
 
+export class LoginDto {
+  @ApiProperty({
+    description: 'User email address',
+    example: 'student@nyu.edu',
+    type: String,
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({
+    description: 'User password',
+    example: 'yourpassword123',
+    type: String,
+  })
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
+
 export class AuthResponseDTO {
   @ApiProperty({
     description: 'Authentication token',
@@ -22,7 +42,7 @@ export class AuthResponseDTO {
   token: string;
 
   @ApiProperty({
-    description: 'Authentication token',
+    description: 'Refresh token for getting new access tokens',
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   })
   @IsNotEmpty()

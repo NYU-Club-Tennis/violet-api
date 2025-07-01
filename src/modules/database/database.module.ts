@@ -14,6 +14,9 @@ import { env } from 'src/constants/environment.constant';
       entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       synchronize: env.database.sync,
       logging: ['schema', 'error', 'warn'],
+      ssl: {
+        rejectUnauthorized: true,
+      },
     }),
   ],
 })
