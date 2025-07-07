@@ -8,8 +8,78 @@ import {
   IsDateString,
   Matches,
   IsOptional,
+  IsArray,
 } from 'class-validator';
 import { SkillLevel } from 'src/constants/enum/skill.enum';
+import {
+  ISession,
+  ISessionPaginateQuery,
+} from '../interfaces/session.interface';
+import {
+  IPaginateResponse,
+  ISortOption,
+} from 'src/common/interfaces/common.interface';
+import { Type } from 'class-transformer';
+
+export class SessionDTO implements ISession {
+  @ApiProperty({
+    description: 'Unique identifier of the session',
+    example: 1,
+    type: Number,
+  })
+  id: number;
+
+  @ApiProperty({
+    description: 'Location where the session will be held',
+    example: 'NYU Tennis Courts',
+    type: String,
+  })
+  location: string;
+
+  @ApiProperty({
+    description: 'Name of the session',
+    example: 'Sunday Morning Tennis',
+    type: String,
+  })
+  name: string;
+
+  @ApiProperty({
+    description: 'Date of the session in ISO format',
+    example: '2024-03-20',
+    type: String,
+  })
+  date: string;
+
+  @ApiProperty({
+    description: 'Skill level required for the session',
+    enum: SkillLevel,
+    example: SkillLevel.Intermediate,
+  })
+  skillLevel: string;
+
+  @ApiProperty({
+    description: 'Time of the session in 24-hour format (HH:mm)',
+    example: '14:00',
+    type: String,
+  })
+  time: string;
+
+  @ApiProperty({
+    description: 'Number of spots currently available',
+    example: 12,
+    type: Number,
+    minimum: 0,
+  })
+  spotsAvailable: number;
+
+  @ApiProperty({
+    description: 'Total number of spots available for the session',
+    example: 12,
+    type: Number,
+    minimum: 1,
+  })
+  spotsTotal: number;
+}
 
 export class CreateSessionDto {
   @ApiProperty({
@@ -188,4 +258,73 @@ export class SessionResponseDto extends CreateSessionDto {
     nullable: true,
   })
   deletedAt?: string;
+}
+
+export class SessionPaginateQueryResponseDTO
+  implements IPaginateResponse<SessionDTO>
+{
+  @ApiProperty({
+    description: 'Array of sessions',
+    example: [SessionDTO],
+    type: () => [SessionDTO],
+  })
+  @IsArray()
+  data: SessionDTO[];
+
+  @ApiProperty({
+    description:
+      'Total of Players found with the page and limit sent, will be use to calculated total page for Pagination component.',
+    example: 10,
+    type: Number,
+  })
+  @IsNumber()
+  total: number;
+}
+
+export class SessionPaginateQueryRequestDTO implements ISessionPaginateQuery {
+  @ApiProperty({
+    description: 'Page number for pagination',
+    example: 1,
+    type: Number,
+    minimum: 1,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  page: number;
+
+  @ApiProperty({
+    description: 'Number of items per page',
+    example: 10,
+    type: Number,
+    minimum: 1,
+  })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  limit: number;
+
+  @ApiProperty({
+    description: 'Optional search term',
+    example: 'Tennis',
+    type: String,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  search?: string;
+
+  @ApiProperty({
+    description: 'Sort options for the query',
+    example: [{ createdAt: 'DESC' }],
+    type: 'array',
+    items: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+    },
+    required: false,
+  })
+  @IsArray()
+  @IsOptional()
+  sortOptions: ISortOption[];
 }

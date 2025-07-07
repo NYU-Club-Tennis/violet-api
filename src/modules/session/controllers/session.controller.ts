@@ -7,6 +7,7 @@ import {
   Put,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { SessionService } from '../services/session.service';
 import { Session } from '../entities/session.entity';
@@ -14,6 +15,8 @@ import {
   CreateSessionDto,
   UpdateSessionDto,
   SessionResponseDto,
+  SessionPaginateQueryRequestDTO,
+  SessionPaginateQueryResponseDTO,
 } from '../dto/session.dto';
 import {
   ApiTags,
@@ -58,6 +61,27 @@ export class SessionController {
   })
   async findAll(): Promise<Session[]> {
     return this.sessionService.findAll();
+  }
+
+  @Get('paginate')
+  @ApiOperation({ summary: 'Get paginated sessions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns paginated sessions',
+    type: SessionPaginateQueryResponseDTO,
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async findPaginate(
+    @Query()
+    query: SessionPaginateQueryRequestDTO,
+  ): Promise<SessionPaginateQueryResponseDTO> {
+    try {
+      const [data, total] = await this.sessionService.findPaginate(query);
+      return { data, total };
+    } catch (error) {
+      throw error;
+    }
   }
 
   @Get(':id')
