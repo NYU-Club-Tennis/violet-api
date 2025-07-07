@@ -173,7 +173,6 @@ export class AuthController {
   async refreshToken(
     @Body() body: RotateRefreshTokenDTO,
   ): Promise<TokenRefreshResponseDTO> {
-    console.log('hello');
     try {
       const payload = await this.authService.verifyRefreshToken(
         body.refreshToken,
