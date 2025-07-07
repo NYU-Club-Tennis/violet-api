@@ -6,6 +6,7 @@ export interface IBaseEntity {
 export interface IPaginateQuery {
   page: number;
   limit: number;
+  search?: string;
 }
 
 export interface IPaginateResponse<T> {
