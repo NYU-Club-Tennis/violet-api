@@ -8,6 +8,7 @@ import {
 import { ISession } from '../interfaces/session.interface';
 import { Registration } from 'src/modules/registration/entities/registration.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
+import { SessionStatus } from 'src/constants/enum/session.enum';
 
 @Entity()
 export class Session extends BaseEntity implements ISession {
@@ -34,6 +35,19 @@ export class Session extends BaseEntity implements ISession {
 
   @Column()
   spotsTotal: number;
+
+  @Column({
+    type: 'enum',
+    enum: SessionStatus,
+    default: SessionStatus.OPEN,
+  })
+  status: SessionStatus;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  notes: string;
 
   @OneToMany(() => Registration, (registration) => registration.id)
   @JoinColumn({

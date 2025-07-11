@@ -3,6 +3,8 @@ import {
   IPaginateQuery,
   ISortOption,
 } from 'src/common/interfaces/common.interface';
+import { Registration } from 'src/modules/registration/entities/registration.entity';
+import { SessionStatus } from 'src/constants/enum/session.enum';
 
 export interface ISession extends IBaseEntity {
   id: number;
@@ -13,9 +15,23 @@ export interface ISession extends IBaseEntity {
   time: string;
   spotsAvailable: number;
   spotsTotal: number;
+  status: SessionStatus;
+  notes?: string;
+  registration: Registration;
 }
 
-export type ISessionCreate = Omit<ISession, 'id'>;
+export interface ISessionCreate {
+  location: string;
+  name: string;
+  date: string;
+  skillLevel: string;
+  time: string;
+  spotsAvailable: number;
+  spotsTotal: number;
+  status?: SessionStatus;
+  notes?: string;
+  registration?: Registration;
+}
 
 export interface ISessionPaginateQuery extends IPaginateQuery {
   sortOptions: ISortOption[];

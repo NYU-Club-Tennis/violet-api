@@ -17,6 +17,7 @@ import {
   ISessionCreate,
   ISessionPaginateQuery,
 } from '../interfaces/session.interface';
+import { SessionStatus } from 'src/constants/enum/session.enum';
 
 @Injectable()
 export class SessionService {
@@ -55,7 +56,10 @@ export class SessionService {
   }
 
   async create(sessionData: ISessionCreate) {
-    const session = await this.sessionRepository.save(sessionData);
+    const session = await this.sessionRepository.save({
+      ...sessionData,
+      status: sessionData.status || SessionStatus.OPEN,
+    });
     return session;
   }
 
