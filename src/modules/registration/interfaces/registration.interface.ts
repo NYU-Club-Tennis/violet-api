@@ -13,7 +13,6 @@ export interface IRegistration extends IBaseEntity {
   userId: number;
   sessionId: number;
   position: number;
-  registrationCount: number;
   lastCancellation: Date | null;
   hasAttended: boolean;
   status: RegistrationStatus;

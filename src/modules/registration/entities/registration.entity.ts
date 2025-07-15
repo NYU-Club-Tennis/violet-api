@@ -27,9 +27,6 @@ export class Registration extends BaseEntity implements IRegistration {
   @Column({ default: 0 })
   position: number; // 0 = regular registration, 1+ = waitlist position
 
-  @Column({ default: 1 })
-  registrationCount: number; // Number of times user has registered for sessions
-
   @Column({ type: 'timestamp', nullable: true })
   lastCancellation: Date | null;
 

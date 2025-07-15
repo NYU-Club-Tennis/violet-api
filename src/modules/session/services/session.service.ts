@@ -10,6 +10,8 @@ import {
   FindManyOptions,
   ILike,
   MoreThan,
+  In,
+  ArrayContains,
 } from 'typeorm';
 import { Session } from '../entities/session.entity';
 import {
@@ -75,7 +77,7 @@ export class SessionService {
       limit,
       search,
       location,
-      skillLevel,
+      skillLevels,
       date,
       hasSpots,
       sortOptions,
@@ -102,8 +104,9 @@ export class SessionService {
       whereConditions.location = location;
     }
 
-    if (skillLevel) {
-      whereConditions.skillLevel = skillLevel;
+    if (skillLevels && skillLevels.length > 0) {
+      // Find sessions that have ANY of the requested skill levels
+      whereConditions.skillLevels = ArrayContains(skillLevels);
     }
 
     if (date) {
@@ -113,6 +116,7 @@ export class SessionService {
     if (hasSpots) {
       whereConditions.spotsAvailable = MoreThan(0);
     }
+
     if (Object.keys(whereConditions).length > 0) {
       if (Array.isArray(findOptions.where)) {
         // If we have search conditions, merge with filters
@@ -141,10 +145,12 @@ export class SessionService {
         time: 'ASC',
       };
     }
+
     try {
       // Return both the paginated results and total count
       return this.sessionRepository.findAndCount(findOptions);
     } catch (error) {
+      console.error('Error in findPaginate:', error);
       throw new InternalServerErrorException('Error fetching sessions');
     }
   }

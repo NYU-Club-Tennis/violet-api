@@ -53,11 +53,12 @@ export class SessionDTO implements ISession {
   date: string;
 
   @ApiProperty({
-    description: 'Skill level required for the session',
+    description: 'Skill levels allowed for the session',
     enum: SkillLevel,
-    example: SkillLevel.Intermediate,
+    isArray: true,
+    example: [SkillLevel.Intermediate, SkillLevel.Advanced],
   })
-  skillLevel: string;
+  skillLevels: SkillLevel[];
 
   @ApiProperty({
     description: 'Time of the session in 24-hour format (HH:mm)',
@@ -145,13 +146,15 @@ export class CreateSessionDto {
   time: string;
 
   @ApiProperty({
-    description: 'Skill level required for the session',
+    description: 'Skill levels allowed for the session',
     enum: SkillLevel,
-    example: SkillLevel.Intermediate,
+    isArray: true,
+    example: [SkillLevel.Intermediate, SkillLevel.Advanced],
   })
-  @IsEnum(SkillLevel)
+  @IsArray()
+  @IsEnum(SkillLevel, { each: true })
   @IsNotEmpty()
-  skillLevel: SkillLevel;
+  skillLevels: SkillLevel[];
 
   @ApiProperty({
     description: 'Total number of spots available for the session',
@@ -241,14 +244,16 @@ export class UpdateSessionDto {
   time?: string;
 
   @ApiProperty({
-    description: 'Skill level required for the session',
+    description: 'Skill levels allowed for the session',
     enum: SkillLevel,
-    example: SkillLevel.Intermediate,
+    isArray: true,
+    example: [SkillLevel.Intermediate, SkillLevel.Advanced],
     required: false,
   })
   @IsOptional()
-  @IsEnum(SkillLevel)
-  skillLevel?: SkillLevel;
+  @IsArray()
+  @IsEnum(SkillLevel, { each: true })
+  skillLevels?: SkillLevel[];
 
   @ApiProperty({
     description: 'Total number of spots available for the session',
