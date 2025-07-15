@@ -11,6 +11,7 @@ import {
   IsArray,
 } from 'class-validator';
 import { SkillLevel } from 'src/constants/enum/skill.enum';
+import { SessionStatus } from 'src/constants/enum/session.enum';
 import {
   ISession,
   ISessionPaginateQuery,
@@ -20,6 +21,7 @@ import {
   ISortOption,
 } from 'src/common/interfaces/common.interface';
 import { Type } from 'class-transformer';
+import { Registration } from 'src/modules/registration/entities/registration.entity';
 
 export class SessionDTO implements ISession {
   @ApiProperty({
@@ -51,11 +53,12 @@ export class SessionDTO implements ISession {
   date: string;
 
   @ApiProperty({
-    description: 'Skill level required for the session',
+    description: 'Skill levels allowed for the session',
     enum: SkillLevel,
-    example: SkillLevel.Intermediate,
+    isArray: true,
+    example: [SkillLevel.Intermediate, SkillLevel.Advanced],
   })
-  skillLevel: string;
+  skillLevels: SkillLevel[];
 
   @ApiProperty({
     description: 'Time of the session in 24-hour format (HH:mm)',
@@ -79,6 +82,27 @@ export class SessionDTO implements ISession {
     minimum: 1,
   })
   spotsTotal: number;
+
+  @ApiProperty({
+    description: 'Status of the session',
+    enum: SessionStatus,
+    example: SessionStatus.OPEN,
+  })
+  status: SessionStatus;
+
+  @ApiProperty({
+    description: 'Additional notes about the session',
+    example: 'Please bring your own racket. Water will be provided.',
+    type: String,
+    required: false,
+  })
+  notes?: string;
+
+  @ApiProperty({
+    description: 'Registration information for the session',
+    type: () => Registration,
+  })
+  registration: Registration;
 }
 
 export class CreateSessionDto {
@@ -122,13 +146,15 @@ export class CreateSessionDto {
   time: string;
 
   @ApiProperty({
-    description: 'Skill level required for the session',
+    description: 'Skill levels allowed for the session',
     enum: SkillLevel,
-    example: SkillLevel.Intermediate,
+    isArray: true,
+    example: [SkillLevel.Intermediate, SkillLevel.Advanced],
   })
-  @IsEnum(SkillLevel)
+  @IsArray()
+  @IsEnum(SkillLevel, { each: true })
   @IsNotEmpty()
-  skillLevel: SkillLevel;
+  skillLevels: SkillLevel[];
 
   @ApiProperty({
     description: 'Total number of spots available for the session',
@@ -149,6 +175,26 @@ export class CreateSessionDto {
   @IsNumber()
   @Min(0)
   spotsAvailable: number;
+
+  @ApiProperty({
+    description: 'Status of the session',
+    enum: SessionStatus,
+    example: SessionStatus.OPEN,
+    default: SessionStatus.OPEN,
+  })
+  @IsEnum(SessionStatus)
+  @IsOptional()
+  status?: SessionStatus;
+
+  @ApiProperty({
+    description: 'Additional notes about the session',
+    example: 'Please bring your own racket. Water will be provided.',
+    type: String,
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  notes?: string;
 }
 
 export class UpdateSessionDto {
@@ -198,14 +244,16 @@ export class UpdateSessionDto {
   time?: string;
 
   @ApiProperty({
-    description: 'Skill level required for the session',
+    description: 'Skill levels allowed for the session',
     enum: SkillLevel,
-    example: SkillLevel.Intermediate,
+    isArray: true,
+    example: [SkillLevel.Intermediate, SkillLevel.Advanced],
     required: false,
   })
   @IsOptional()
-  @IsEnum(SkillLevel)
-  skillLevel?: SkillLevel;
+  @IsArray()
+  @IsEnum(SkillLevel, { each: true })
+  skillLevels?: SkillLevel[];
 
   @ApiProperty({
     description: 'Total number of spots available for the session',
@@ -230,6 +278,26 @@ export class UpdateSessionDto {
   @IsNumber()
   @Min(0)
   spotsAvailable?: number;
+
+  @ApiProperty({
+    description: 'Status of the session',
+    enum: SessionStatus,
+    example: SessionStatus.OPEN,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(SessionStatus)
+  status?: SessionStatus;
+
+  @ApiProperty({
+    description: 'Additional notes about the session',
+    example: 'Please bring your own racket. Water will be provided.',
+    type: String,
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class SessionResponseDto extends CreateSessionDto {
