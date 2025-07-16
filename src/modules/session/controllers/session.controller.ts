@@ -29,7 +29,7 @@ import { Roles } from 'src/middleware/decorators/roles.decorator';
 import { Role } from 'src/constants/enum/roles.enum';
 
 @ApiTags('Sessions')
-@Controller('Session')
+@Controller('session')
 export class SessionController {
   constructor(private readonly sessionService: SessionService) {}
 
