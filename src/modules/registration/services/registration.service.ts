@@ -2,11 +2,16 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Registration } from '../entities/registration.entity';
 import { Repository, LessThan, In, MoreThanOrEqual } from 'typeorm';
-import { RegistrationStatus } from '../interfaces/registration.interface';
+import {
+  RegistrationStatus,
+  ISessionRegistrationsResponse,
+  IActiveRegistrationsCountResponse,
+} from '../interfaces/registration.interface';
 import { UserService } from '../../user/services/user.service';
 import {
   RegistrationResponseDto,
   GetRegistrationHistoryQueryDto,
+  SessionRegistrationsResponseDto,
 } from '../dto/registration.dto';
 import { Session } from '../../session/entities/session.entity';
 import { SessionStatus } from 'src/constants/enum/session.enum';
@@ -22,23 +27,35 @@ export class RegistrationService {
   ) {}
 
   private toResponseDto(registration: Registration): RegistrationResponseDto {
-    const response = new RegistrationResponseDto();
-    Object.assign(response, {
-      ...registration,
+    const dto: RegistrationResponseDto = {
+      id: registration.id,
+      userId: registration.userId,
+      sessionId: registration.sessionId,
+      position: registration.position,
+      hasAttended: registration.hasAttended,
+      status: registration.status,
+      lastCancellation: registration.lastCancellation,
       createdAt: registration.createdAt
         ? new Date(registration.createdAt)
         : new Date(),
       updatedAt: registration.updatedAt
         ? new Date(registration.updatedAt)
         : new Date(),
-      deletedAt: registration.deletedAt
-        ? new Date(registration.deletedAt)
-        : null,
-      lastCancellation: registration.lastCancellation
-        ? new Date(registration.lastCancellation)
-        : null,
-    });
-    return response;
+    };
+
+    // Include user information if it's loaded
+    if (registration.user) {
+      dto.user = {
+        id: registration.user.id,
+        firstName: registration.user.firstName,
+        lastName: registration.user.lastName,
+        email: registration.user.email,
+        phoneNumber: registration.user.phoneNumber,
+        noShowCount: registration.user.noShowCount,
+      };
+    }
+
+    return dto;
   }
 
   async create(
@@ -284,6 +301,47 @@ export class RegistrationService {
       },
     });
     return registrations.map((reg) => this.toResponseDto(reg));
+  }
+
+  async getSessionRegistrationsWithUsers(
+    sessionId: number,
+  ): Promise<ISessionRegistrationsResponse> {
+    const registrations = await this.registrationRepository.find({
+      where: {
+        sessionId,
+        status: In([
+          RegistrationStatus.REGISTERED,
+          RegistrationStatus.WAITLISTED,
+        ]),
+      },
+      relations: ['user'],
+      order: {
+        status: 'ASC', // REGISTERED first, then WAITLISTED
+        position: 'ASC', // Then by position
+        createdAt: 'ASC', // Then by creation time
+      },
+    });
+
+    const data = registrations.map((reg) => this.toResponseDto(reg));
+    return { data };
+  }
+
+  async getActiveRegistrationsCount(): Promise<IActiveRegistrationsCountResponse> {
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+
+    const count = await this.registrationRepository
+      .createQueryBuilder('registration')
+      .innerJoin('registration.session', 'session')
+      .where('registration.status IN (:...statuses)', {
+        statuses: [
+          RegistrationStatus.REGISTERED,
+          RegistrationStatus.WAITLISTED,
+        ],
+      })
+      .andWhere('session.date >= :today', { today })
+      .getCount();
+
+    return { count };
   }
 
   async getWaitlistBySession(

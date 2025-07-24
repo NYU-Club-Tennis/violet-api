@@ -12,12 +12,15 @@ import {
   MoreThan,
   In,
   ArrayContains,
+  IsNull,
 } from 'typeorm';
 import { Session } from '../entities/session.entity';
+import { Registration } from '../../registration/entities/registration.entity';
 import {
   ISession,
   ISessionCreate,
   ISessionPaginateQuery,
+  ISessionCountResponse,
 } from '../interfaces/session.interface';
 import { SessionStatus } from 'src/constants/enum/session.enum';
 
@@ -26,13 +29,19 @@ export class SessionService {
   constructor(
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
+    @InjectRepository(Registration)
+    private registrationRepository: Repository<Registration>,
   ) {}
   async findAll(): Promise<Session[]> {
-    return this.sessionRepository.find();
+    return this.sessionRepository.find({
+      where: { deletedAt: IsNull() },
+    });
   }
 
   async findOne(id: number): Promise<Session> {
-    const session = await this.sessionRepository.findOne({ where: { id } });
+    const session = await this.sessionRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+    });
     if (!session) {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
@@ -43,17 +52,40 @@ export class SessionService {
     return this.sessionRepository.findOneOrFail({
       where: {
         id,
+        deletedAt: IsNull(),
       },
       relations,
     });
   }
 
   async deleteOne(id: number): Promise<Session> {
-    const session = await this.sessionRepository.findOne({ where: { id } });
+    const session = await this.sessionRepository.findOne({
+      where: { id, deletedAt: IsNull() },
+    });
     if (!session) {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
-    await this.sessionRepository.delete(id);
+
+    // First, soft delete all associated registrations (only non-deleted ones)
+    const registrations = await this.registrationRepository.find({
+      where: { sessionId: id, deletedAt: IsNull() },
+    });
+
+    if (registrations.length > 0) {
+      // Soft delete all active registrations for this session
+      const registrationIds = registrations.map((reg) => reg.id);
+      await this.registrationRepository.softDelete(registrationIds);
+
+      console.log(
+        `Soft deleted ${registrations.length} registrations for session ${id}`,
+      );
+    }
+
+    // Then soft delete the session itself
+    await this.sessionRepository.softDelete(id);
+
+    console.log(`Soft deleted session ${id}`);
+
     return session;
   }
 
@@ -87,18 +119,18 @@ export class SessionService {
       take: limit,
       skip: (page - 1) * limit,
       order: {},
-      where: {},
+      where: { deletedAt: IsNull() }, // Exclude soft-deleted sessions
     };
 
     if (search) {
       const searchTerm = search.trim();
       findOptions.where = [
-        { name: ILike(`%${searchTerm}%`) },
-        { location: ILike(`%${searchTerm}%`) },
+        { name: ILike(`%${searchTerm}%`), deletedAt: IsNull() },
+        { location: ILike(`%${searchTerm}%`), deletedAt: IsNull() },
       ];
     }
 
-    const whereConditions: any = {};
+    const whereConditions: any = { deletedAt: IsNull() };
 
     if (location) {
       whereConditions.location = location;
@@ -117,7 +149,8 @@ export class SessionService {
       whereConditions.spotsAvailable = MoreThan(0);
     }
 
-    if (Object.keys(whereConditions).length > 0) {
+    if (Object.keys(whereConditions).length > 1) {
+      // More than just deletedAt
       if (Array.isArray(findOptions.where)) {
         // If we have search conditions, merge with filters
         findOptions.where = findOptions.where.map((condition) => ({
@@ -154,6 +187,17 @@ export class SessionService {
       throw new InternalServerErrorException('Error fetching sessions');
     }
   }
+
+  async getActiveSessionsCount(): Promise<ISessionCountResponse> {
+    const count = await this.sessionRepository.count({
+      where: {
+        status: SessionStatus.OPEN,
+        deletedAt: IsNull(),
+      },
+    });
+    return { count };
+  }
+
   private isValidDate(date: string): boolean {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD format
     return dateRegex.test(date) && !isNaN(Date.parse(date));

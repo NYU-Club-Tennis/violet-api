@@ -19,6 +19,8 @@ import {
   MarkAttendanceDto,
   RegistrationResponseDto,
   GetRegistrationHistoryQueryDto,
+  SessionRegistrationsResponseDto,
+  ActiveRegistrationsCountResponseDto,
 } from '../dto/registration.dto';
 import {
   ApiTags,
@@ -26,6 +28,10 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import {
+  ISessionRegistrationsResponse,
+  IActiveRegistrationsCountResponse,
+} from '../interfaces/registration.interface';
 
 @ApiBearerAuth()
 @ApiTags('Registration')
@@ -99,6 +105,24 @@ export class RegistrationController {
     return this.registrationService.getWaitlistBySession(sessionId);
   }
 
+  @Get('current')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Get current user registration history' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user registration history',
+    type: [RegistrationResponseDto],
+  })
+  async getCurrentUserRegistrations(
+    @Request() req,
+    @Query() query: GetRegistrationHistoryQueryDto,
+  ): Promise<RegistrationResponseDto[]> {
+    return this.registrationService.getUserRegistrationHistory(
+      req.user.id,
+      query,
+    );
+  }
+
   @Get('user/:userId')
   @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Get registration history for a user' })
@@ -117,24 +141,6 @@ export class RegistrationController {
       throw new UnauthorizedException('Cannot view other users registrations');
     }
     return this.registrationService.getUserRegistrationHistory(userId, query);
-  }
-
-  @Get('current')
-  @UseGuards(AuthGuard)
-  @ApiOperation({ summary: 'Get current user registration history' })
-  @ApiResponse({
-    status: 200,
-    description: 'Current user registration history',
-    type: [RegistrationResponseDto],
-  })
-  async getCurrentUserRegistrations(
-    @Request() req,
-    @Query() query: GetRegistrationHistoryQueryDto,
-  ): Promise<RegistrationResponseDto[]> {
-    return this.registrationService.getUserRegistrationHistory(
-      req.user.id,
-      query,
-    );
   }
 
   @Post(':id/attendance')
@@ -157,5 +163,45 @@ export class RegistrationController {
       id,
       markAttendanceDto.hasAttended,
     );
+  }
+
+  @Get('active/count')
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get active registrations count (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Returns total number of active registrations for future sessions',
+    type: ActiveRegistrationsCountResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async getActiveRegistrationsCount(): Promise<IActiveRegistrationsCountResponse> {
+    return this.registrationService.getActiveRegistrationsCount();
+  }
+
+  @Get('session/:sessionId/users')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Get all users registered/waitlisted for a session (Admin only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of users registered and waitlisted for the session',
+    type: SessionRegistrationsResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  @ApiResponse({ status: 404, description: 'Session not found.' })
+  async getSessionRegistrationsWithUsers(
+    @Param('sessionId') sessionId: number,
+  ): Promise<ISessionRegistrationsResponse> {
+    return this.registrationService.getSessionRegistrationsWithUsers(sessionId);
   }
 }

@@ -396,3 +396,14 @@ export class SessionPaginateQueryRequestDTO implements ISessionPaginateQuery {
   @IsOptional()
   sortOptions: ISortOption[];
 }
+
+export class SessionCountResponseDto {
+  @ApiProperty({
+    description: 'Total number of active sessions (status = OPEN)',
+    example: 24,
+    type: Number,
+  })
+  @IsNumber()
+  @Min(0)
+  count: number;
+}
