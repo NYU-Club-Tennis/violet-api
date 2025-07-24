@@ -17,6 +17,7 @@ import {
   SessionResponseDto,
   SessionPaginateQueryRequestDTO,
   SessionPaginateQueryResponseDTO,
+  SessionCountResponseDto,
 } from '../dto/session.dto';
 import {
   ApiTags,
@@ -137,5 +138,24 @@ export class SessionController {
   @ApiResponse({ status: 404, description: 'Session not found.' })
   async deleteSession(@Param('id') id: string): Promise<Session> {
     return this.sessionService.deleteOne(+id);
+  }
+
+  @Get('active/count')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get active sessions count (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns total number of active sessions (status = OPEN)',
+    type: SessionCountResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async getActiveSessionsCount(): Promise<SessionCountResponseDto> {
+    return this.sessionService.getActiveSessionsCount();
   }
 }

@@ -36,10 +36,15 @@ export interface ISessionCreate {
 
 export interface ISessionPaginateQuery extends IPaginateQuery {
   sortOptions: ISortOption[];
+  search?: string;
   location?: string;
   skillLevels?: SkillLevel[];
   date?: string;
   hasSpots?: boolean;
+}
+
+export interface ISessionCountResponse {
+  count: number;
 }
 
 // Common sorting scenarios

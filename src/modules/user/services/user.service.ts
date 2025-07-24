@@ -1,9 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindManyOptions, ILike } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { env } from 'src/constants/environment.constant';
-import { IUserCreate, IUserPaginateQuery } from '../interfaces/user.interface';
+import {
+  IUserCreate,
+  IUserPaginateQuery,
+  IUserCountResponse,
+} from '../interfaces/user.interface';
 
 import * as bcrypt from 'bcryptjs';
 import { REDIS_CLIENT } from 'src/constants/redis.constant';
@@ -107,5 +111,67 @@ export class UserService {
 
   async bulkDelete(userData: User[]) {
     return this.usersRepository.softRemove(userData, { chunk: 20 });
+  }
+
+  async findPaginate(query: IUserPaginateQuery) {
+    const { page, limit, search, sortOptions } = query;
+
+    const findOptions: FindManyOptions<User> = {
+      take: limit,
+      skip: (page - 1) * limit,
+      order: {},
+      where: {},
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        isAdmin: true,
+        noShowCount: true,
+        lastSignInAt: true,
+        createdAt: true,
+        updatedAt: true,
+        // Exclude password from results
+      },
+    };
+
+    // Handle search functionality
+    if (search) {
+      const searchTerm = search.trim();
+      findOptions.where = [
+        { firstName: ILike(`%${searchTerm}%`) },
+        { lastName: ILike(`%${searchTerm}%`) },
+        { email: ILike(`%${searchTerm}%`) },
+      ];
+    }
+
+    // Handle sorting
+    if (sortOptions?.length) {
+      sortOptions.forEach((option) => {
+        findOptions.order = {
+          ...findOptions.order,
+          ...option,
+        };
+      });
+    } else {
+      // Default sorting by creation date (newest first)
+      findOptions.order = {
+        createdAt: 'DESC',
+      };
+    }
+
+    try {
+      // Return both the paginated results and total count
+      return this.usersRepository.findAndCount(findOptions);
+    } catch (error) {
+      console.error('Error in findPaginate:', error);
+      throw new Error('Error fetching users');
+    }
+  }
+
+  async getTotalUsersCount(): Promise<IUserCountResponse> {
+    const count = await this.usersRepository.count();
+    return { count };
   }
 }

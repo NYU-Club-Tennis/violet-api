@@ -20,5 +20,10 @@ export interface IUser extends IBaseEntity {
 export type IUserCreate = Omit<IUser, 'id'>;
 
 export interface IUserPaginateQuery extends IPaginateQuery {
-  sortOptions: ISortOption[];
+  sortOptions?: ISortOption[];
+  search?: string;
+}
+
+export interface IUserCountResponse {
+  count: number;
 }
