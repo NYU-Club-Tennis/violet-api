@@ -8,6 +8,7 @@ import {
 import { IUser } from '../interfaces/user.interface';
 import { Registration } from 'src/modules/registration/entities/registration.entity';
 import { BaseEntity } from 'src/common/entities/base.entity';
+import { MembershipLevel } from 'src/constants/enum/membership.enum';
 
 @Entity()
 export class User extends BaseEntity implements IUser {
@@ -34,6 +35,13 @@ export class User extends BaseEntity implements IUser {
 
   @Column({ default: false })
   isAdmin: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: MembershipLevel,
+    default: MembershipLevel.USER,
+  })
+  membershipLevel: MembershipLevel;
 
   @Column({ default: 0 })
   noShowCount: number;

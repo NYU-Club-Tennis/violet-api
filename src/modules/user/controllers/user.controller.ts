@@ -1,4 +1,14 @@
-import { Controller, Get, UseGuards, Request, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  Request,
+  Query,
+  Param,
+  Body,
+  Patch,
+  BadRequestException,
+} from '@nestjs/common';
 import { UserService } from '../services/user.service';
 import { AuthService } from 'src/modules/auth/services/auth.service';
 import { AppLogger } from 'src/modules/logger/logger.service';
@@ -9,6 +19,12 @@ import {
   UserCountResponseDto,
   UserPaginateQueryDto,
   UserPaginateResponseDto,
+  UserResponseDto,
+  UpdateUserRoleDto,
+  EmailsByRolesResponseDto,
+  UpdateMembershipLevelDto,
+  UserSearchQueryDto,
+  UserSearchResponseDto,
 } from '../dto/users.dto';
 
 import * as dayjs from 'dayjs';
@@ -69,10 +85,12 @@ export class UserController {
       email: user.email,
       phoneNumber: user.phoneNumber,
       isAdmin: user.isAdmin,
+      membershipLevel: user.membershipLevel,
       noShowCount: user.noShowCount,
       lastSignInAt: user.lastSignInAt,
       createdAt: user.createdAt || '',
       updatedAt: user.updatedAt || '',
+      avatarUrl: user.avatarUrl,
     }));
 
     return { data, total };
@@ -89,5 +107,186 @@ export class UserController {
   })
   async getTotalUsersCount(): Promise<UserCountResponseDto> {
     return this.userService.getTotalUsersCount();
+  }
+
+  @Patch(':id/role')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update user role (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User role updated successfully',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async updateUserRole(
+    @Param('id') id: number,
+    @Body() updateUserRoleDto: UpdateUserRoleDto,
+    @Request() req,
+  ): Promise<UserResponseDto> {
+    // Prevent users from changing their own role
+    if (req.user.id === id) {
+      throw new BadRequestException(
+        'You cannot change your own role. Please ask another admin to do this for you.',
+      );
+    }
+
+    const updatedUser = await this.userService.updateUserRole(
+      id,
+      updateUserRoleDto.role === Role.ADMIN,
+    );
+
+    return {
+      id: updatedUser.id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      isAdmin: updatedUser.isAdmin,
+      membershipLevel: updatedUser.membershipLevel,
+      noShowCount: updatedUser.noShowCount,
+      lastSignInAt: updatedUser.lastSignInAt,
+      createdAt: updatedUser.createdAt || '',
+      updatedAt: updatedUser.updatedAt || '',
+      avatarUrl: updatedUser.avatarUrl,
+    };
+  }
+
+  @Patch(':id/membership-level')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update user membership level (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User membership level updated successfully',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async updateMembershipLevel(
+    @Param('id') id: number,
+    @Body() updateMembershipLevelDto: UpdateMembershipLevelDto,
+    @Request() req,
+  ): Promise<UserResponseDto> {
+    // Prevent users from changing their own membership level
+    if (req.user.id === id) {
+      throw new BadRequestException(
+        'You cannot change your own membership level. Please ask another admin to do this for you.',
+      );
+    }
+
+    const updatedUser = await this.userService.updateMembershipLevel(
+      id,
+      updateMembershipLevelDto.membershipLevel,
+    );
+
+    return {
+      id: updatedUser.id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      isAdmin: updatedUser.isAdmin,
+      membershipLevel: updatedUser.membershipLevel,
+      noShowCount: updatedUser.noShowCount,
+      lastSignInAt: updatedUser.lastSignInAt,
+      createdAt: updatedUser.createdAt || '',
+      updatedAt: updatedUser.updatedAt || '',
+      avatarUrl: updatedUser.avatarUrl,
+    };
+  }
+
+  @Get('emails-by-roles')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get user emails by roles (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns array of email addresses for the specified roles',
+    type: EmailsByRolesResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async getUserEmailsByRoles(
+    @Query('roles') roles: string | string[],
+  ): Promise<EmailsByRolesResponseDto> {
+    // Handle different array formats
+    let roleArray: string[];
+
+    if (Array.isArray(roles)) {
+      roleArray = roles;
+    } else if (typeof roles === 'string') {
+      // Handle comma-separated string or single value
+      roleArray = roles.split(',').map((r) => r.trim());
+    } else {
+      roleArray = [];
+    }
+
+    const emails = await this.userService.getUserEmailsByRoles(roleArray);
+
+    return { emails };
+  }
+
+  @Get('club-members')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get all club member emails (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns array of email addresses for all club members',
+    type: EmailsByRolesResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async getAllClubMembers(): Promise<EmailsByRolesResponseDto> {
+    const emails = await this.userService.getAllClubMembers();
+
+    return { emails };
+  }
+
+  @Get('search')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Search users by name or email (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns array of matching users',
+    type: UserSearchResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async searchUsers(
+    @Query() searchQuery: UserSearchQueryDto,
+  ): Promise<UserSearchResponseDto> {
+    const users = await this.userService.searchUsers(
+      searchQuery.query,
+      searchQuery.limit || 10,
+    );
+
+    const userResults = users.map((user) => ({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+    }));
+
+    return { users: userResults };
   }
 }

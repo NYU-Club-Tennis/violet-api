@@ -8,6 +8,7 @@ import {
   IUserPaginateQuery,
   IUserCountResponse,
 } from '../interfaces/user.interface';
+import { MembershipLevel } from 'src/constants/enum/membership.enum';
 
 import * as bcrypt from 'bcryptjs';
 import { REDIS_CLIENT } from 'src/constants/redis.constant';
@@ -25,6 +26,15 @@ export class UserService {
     // Hash the password before saving
     if (params.password) {
       params.password = await bcrypt.hash(params.password, this.salt);
+    }
+
+    // If creating an admin user, ensure they have at least MEMBER level membership
+    if (
+      params.isAdmin &&
+      (!params.membershipLevel ||
+        params.membershipLevel === MembershipLevel.USER)
+    ) {
+      params.membershipLevel = MembershipLevel.MEMBER;
     }
 
     const user = await this.usersRepository.save(params);
@@ -173,5 +183,124 @@ export class UserService {
   async getTotalUsersCount(): Promise<IUserCountResponse> {
     const count = await this.usersRepository.count();
     return { count };
+  }
+
+  async updateUserRole(userId: number, isAdmin: boolean): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    user.isAdmin = isAdmin;
+
+    // If promoting to admin, ensure they have at least MEMBER level membership
+    if (isAdmin && user.membershipLevel === MembershipLevel.USER) {
+      user.membershipLevel = MembershipLevel.MEMBER;
+    }
+
+    return this.usersRepository.save(user);
+  }
+
+  async updateMembershipLevel(
+    userId: number,
+    membershipLevel: MembershipLevel,
+  ): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    user.membershipLevel = membershipLevel;
+    return this.usersRepository.save(user);
+  }
+
+  async getUserEmailsByRoles(roles: string[]): Promise<string[]> {
+    try {
+      let emails: string[] = [];
+
+      // Handle different role combinations
+      const hasAdminRole = roles.includes('admin');
+      const hasUserRole = roles.includes('user');
+      const hasMemberRole = roles.includes('member');
+
+      if (hasAdminRole) {
+        // Get admin emails (isAdmin: true, regardless of membershipLevel)
+        const adminUsers = await this.usersRepository.find({
+          where: { isAdmin: true },
+          select: ['email'],
+        });
+        emails.push(...adminUsers.map((user) => user.email));
+      }
+
+      if (hasUserRole) {
+        // Get user emails (isAdmin: false AND membershipLevel: 'user')
+        const userUsers = await this.usersRepository.find({
+          where: {
+            isAdmin: false,
+            membershipLevel: MembershipLevel.USER,
+          },
+          select: ['email'],
+        });
+        emails.push(...userUsers.map((user) => user.email));
+      }
+
+      if (hasMemberRole) {
+        // Get member emails (isAdmin: false AND membershipLevel: 'member')
+        const memberUsers = await this.usersRepository.find({
+          where: {
+            isAdmin: false,
+            membershipLevel: MembershipLevel.MEMBER,
+          },
+          select: ['email'],
+        });
+        emails.push(...memberUsers.map((user) => user.email));
+      }
+
+      // Remove duplicates in case a user somehow appears in multiple categories
+      return [...new Set(emails)];
+    } catch (error) {
+      console.error('Error in getUserEmailsByRoles:', error);
+      throw new Error('Error fetching user emails by roles');
+    }
+  }
+
+  async getAllClubMembers(): Promise<string[]> {
+    try {
+      // Get ALL club members (all users in the club - users + members + admins)
+      const allClubMembers = await this.usersRepository.find({
+        select: ['email'],
+      });
+
+      // Remove duplicates
+      return [...new Set(allClubMembers.map((user) => user.email))];
+    } catch (error) {
+      console.error('Error in getAllClubMembers:', error);
+      throw new Error('Error fetching club member emails');
+    }
+  }
+
+  async searchUsers(searchQuery: string, limit: number = 10): Promise<User[]> {
+    try {
+      const searchTerm = searchQuery.trim().toLowerCase();
+
+      if (searchTerm.length < 2) {
+        return [];
+      }
+
+      return await this.usersRepository
+        .createQueryBuilder('user')
+        .select(['user.firstName', 'user.lastName', 'user.email'])
+        .where(
+          "(LOWER(user.firstName) ILIKE :search OR LOWER(user.lastName) ILIKE :search OR LOWER(user.email) ILIKE :search OR LOWER(CONCAT(user.firstName, ' ', user.lastName)) ILIKE :search)",
+          { search: `%${searchTerm}%` },
+        )
+        .orderBy('user.firstName', 'ASC')
+        .addOrderBy('user.lastName', 'ASC')
+        .limit(limit)
+        .getMany();
+    } catch (error) {
+      console.error('Error in searchUsers:', error);
+      throw new Error('Error searching users');
+    }
   }
 }

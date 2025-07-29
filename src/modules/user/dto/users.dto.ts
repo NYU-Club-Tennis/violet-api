@@ -8,12 +8,16 @@ import {
   IsNumber,
   Min,
   IsArray,
+  IsEnum,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
   IPaginateResponse,
   ISortOption,
 } from 'src/common/interfaces/common.interface';
+import { Role } from 'src/constants/enum/roles.enum';
+import { MembershipLevel } from 'src/constants/enum/membership.enum';
 
 export class UserDTO {
   @ApiProperty({
@@ -69,6 +73,15 @@ export class UserDTO {
   })
   @IsBoolean()
   isAdmin: boolean;
+
+  @ApiProperty({
+    description: 'User membership level',
+    enum: MembershipLevel,
+    example: MembershipLevel.USER,
+    default: MembershipLevel.USER,
+  })
+  @IsEnum(MembershipLevel)
+  membershipLevel: MembershipLevel;
 
   @ApiProperty({
     description:
@@ -175,4 +188,101 @@ export class UserPaginateResponseDto
     example: 150,
   })
   total: number;
+}
+
+export class UpdateUserRoleDto {
+  @ApiProperty({
+    description: 'New role for the user',
+    enum: Role,
+    example: Role.ADMIN,
+  })
+  @IsEnum(Role)
+  @IsNotEmpty()
+  role: Role;
+}
+
+export class UpdateMembershipLevelDto {
+  @ApiProperty({
+    description: 'New membership level for the user',
+    enum: MembershipLevel,
+    example: MembershipLevel.MEMBER,
+  })
+  @IsEnum(MembershipLevel)
+  @IsNotEmpty()
+  membershipLevel: MembershipLevel;
+}
+
+export class UserSearchQueryDto {
+  @ApiProperty({
+    description: 'Search term to find users by name or email',
+    example: 'john',
+    minLength: 2,
+  })
+  @IsString()
+  @IsNotEmpty()
+  query: string;
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of results to return',
+    example: 10,
+    default: 10,
+    minimum: 1,
+    maximum: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  @Max(20)
+  limit?: number;
+}
+
+export class UserSearchItemDto {
+  @ApiProperty({
+    description: 'User first name',
+    example: 'John',
+  })
+  firstName: string;
+
+  @ApiProperty({
+    description: 'User last name',
+    example: 'Doe',
+  })
+  lastName: string;
+
+  @ApiProperty({
+    description: 'User email address',
+    example: 'john.doe@nyu.edu',
+  })
+  email: string;
+}
+
+export class UserSearchResponseDto {
+  @ApiProperty({
+    description: 'Array of matching users',
+    type: [UserSearchItemDto],
+  })
+  users: UserSearchItemDto[];
+}
+
+export class EmailsByRolesQueryDto {
+  @ApiProperty({
+    description: 'Array of roles to get emails for',
+    enum: Role,
+    isArray: true,
+    example: [Role.USER, Role.ADMIN],
+  })
+  @IsArray()
+  @IsEnum(Role, { each: true })
+  roles: Role[];
+}
+
+export class EmailsByRolesResponseDto {
+  @ApiProperty({
+    description: 'Array of email addresses for the requested roles',
+    example: ['user1@nyu.edu', 'user2@nyu.edu'],
+    type: [String],
+    isArray: true,
+  })
+  emails: string[];
 }
