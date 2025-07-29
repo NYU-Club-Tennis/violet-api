@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { MailService } from '../services/mail.service';
 import { AppLogger } from 'src/modules/logger/logger.service';
 import {
@@ -11,8 +11,12 @@ import {
   SendMailDto,
   SendWelcomeEmailDto,
   SendSessionConfirmationDto,
+  BulkAnnouncementDto,
 } from '../dtos/mail.dto';
 import { IMailResponse } from '../interfaces/mail.interface';
+import { AuthGuard } from 'src/middleware/guards/auth.guard';
+import { Roles } from 'src/middleware/decorators/roles.decorator';
+import { Role } from 'src/constants/enum/roles.enum';
 
 @ApiBearerAuth()
 @ApiTags('Mail')
@@ -72,6 +76,31 @@ export class MailController {
     return this.mailService.sendVerificationEmail(
       'test@nyu.edu',
       'test-token-12345',
+    );
+  }
+
+  @Post('bulk-announcement')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Send bulk announcement email (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk announcement emails sent successfully',
+    type: Object,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async sendBulkAnnouncement(
+    @Body() dto: BulkAnnouncementDto,
+  ): Promise<IMailResponse> {
+    return this.mailService.sendBulkAnnouncement(
+      dto.emails,
+      dto.header,
+      dto.subject,
+      dto.body,
     );
   }
 }

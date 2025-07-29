@@ -3,6 +3,7 @@ import {
   IPaginateQuery,
   ISortOption,
 } from 'src/common/interfaces/common.interface';
+import { MembershipLevel } from 'src/constants/enum/membership.enum';
 
 export interface IUser extends IBaseEntity {
   id: number;
@@ -13,6 +14,7 @@ export interface IUser extends IBaseEntity {
   password?: string;
   avatarUrl?: string;
   isAdmin: boolean;
+  membershipLevel: MembershipLevel;
   noShowCount: number;
   lastSignInAt?: string;
 }

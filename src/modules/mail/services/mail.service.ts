@@ -146,4 +146,31 @@ export class MailService {
 
     return this.sendMail({ to: [email], subject, html });
   }
+
+  async sendBulkAnnouncement(
+    emails: string[],
+    header: string,
+    subject: string,
+    body: string,
+  ): Promise<IMailResponse> {
+    // Create HTML template with the same styling as verification email
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #57068c; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0;">NYU Tennis Club</h1>
+            </div>
+            <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <h2 style="color: #333; margin-top: 0;">${header}</h2>
+              <div style="color: #666; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">${body}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendMail({ to: emails, subject, html });
+  }
 }
