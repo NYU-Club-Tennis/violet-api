@@ -6,6 +6,7 @@ import {
   IsOptional,
   ValidateNested,
   IsDateString,
+  IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Attachment } from 'nodemailer/lib/mailer';
@@ -114,4 +115,42 @@ export class SendSessionConfirmationDto {
   @ValidateNested()
   @Type(() => SessionDetailsDto)
   sessionDetails: SessionDetailsDto;
+}
+
+export class BulkAnnouncementDto {
+  @ApiProperty({
+    description: 'List of recipient email addresses',
+    example: ['user1@nyu.edu', 'user2@nyu.edu'],
+    type: [String],
+    isArray: true,
+  })
+  @IsEmail({}, { each: true })
+  @IsArray()
+  @Type(() => String)
+  emails: string[];
+
+  @ApiProperty({
+    description: 'Email header text (appears below the NYU Tennis Club banner)',
+    example: 'Important Session Announcement!',
+  })
+  @IsString()
+  @IsNotEmpty()
+  header: string;
+
+  @ApiProperty({
+    description: 'Email subject',
+    example: 'Session Update - Advanced Tennis - March 20, 2024 at NYU Courts',
+  })
+  @IsString()
+  @IsNotEmpty()
+  subject: string;
+
+  @ApiProperty({
+    description: 'Email body content (plain text)',
+    example:
+      'Hello everyone! Just wanted to remind you about our upcoming tennis session...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  body: string;
 }

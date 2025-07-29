@@ -33,6 +33,7 @@ import {
   UserSignupRequestDTO,
 } from '../dtos/auth.dto';
 import { IAuthLoginRequest } from '../interfaces/auth.interface';
+import { MembershipLevel } from 'src/constants/enum/membership.enum';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -132,6 +133,7 @@ export class AuthController {
         password,
         isAdmin: false,
         noShowCount: 0,
+        membershipLevel: MembershipLevel.USER,
       });
 
       const authUser = await this.authService.userLogin({
