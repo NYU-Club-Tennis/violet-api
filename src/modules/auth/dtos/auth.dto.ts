@@ -128,3 +128,52 @@ export class TokenRefreshResponseDTO extends PickType(AuthResponseDTO, [
   'token',
   'refreshToken',
 ]) {}
+
+export class ForgotPasswordDTO {
+  @ApiProperty({
+    description: 'User email address',
+    example: 'student@nyu.edu',
+    type: String,
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+}
+
+export class ResetPasswordDTO {
+  @ApiProperty({
+    description: 'User email address',
+    example: 'student@nyu.edu',
+    type: String,
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @ApiProperty({
+    description: 'New password for the account',
+    example: 'newSecurePassword123',
+    type: String,
+  })
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @ApiProperty({
+    description: 'Reset token received from forgot password email',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    type: String,
+  })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class SuccessResultDTO {
+  @ApiProperty({
+    description: 'Operation success',
+    example: true,
+    type: Boolean,
+  })
+  success: boolean;
+}

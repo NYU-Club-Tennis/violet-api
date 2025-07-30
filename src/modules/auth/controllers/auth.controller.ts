@@ -26,9 +26,12 @@ import {
 import {
   AuthResponseDTO,
   AuthTokenCheckDTO,
+  ForgotPasswordDTO,
   IAuthCreateProfileRequestDTO,
   LoginDto,
+  ResetPasswordDTO,
   RotateRefreshTokenDTO,
+  SuccessResultDTO,
   TokenRefreshResponseDTO,
   UserSignupRequestDTO,
 } from '../dtos/auth.dto';
@@ -213,6 +216,83 @@ export class AuthController {
         throw error;
       }
       throw new BadRequestException('Login failed');
+    }
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body() body: ForgotPasswordDTO,
+  ): Promise<SuccessResultDTO> {
+    try {
+      const { email } = body;
+
+      const token = await this.authService.createEmailVerificationToken(email);
+
+      await this.mailService.sendForgotPasswordEmail(email, token);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error('Forgot password failed', error);
+      throw new BadRequestException('Forgot password failed');
+    }
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password successfully reset',
+    type: SuccessResultDTO,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid token, expired token, or user not found',
+  })
+  async resetPassword(
+    @Body() body: ResetPasswordDTO,
+  ): Promise<SuccessResultDTO> {
+    try {
+      const { email, password, token } = body;
+
+      // Validate email domain
+      if (!email.endsWith('@nyu.edu')) {
+        throw new BadRequestException('Only NYU email addresses are allowed');
+      }
+
+      // Verify the reset token
+      const storedEmail = await this.redis.get(`reset_password:${token}`);
+
+      if (!storedEmail || storedEmail !== email) {
+        throw new BadRequestException('Invalid or expired reset token');
+      }
+
+      // Check if user exists
+      const user = await this.userService.findByEmail(email);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      // Update the user's password
+      await this.userService.update(user.id, { password });
+
+      // Clear the used token from Redis
+      await this.authService.cleanupVerificationTokens(email);
+
+      this.logger.log(`Password reset successful for user: ${email}`);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error('Reset password failed', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Reset password failed');
     }
   }
 }
