@@ -177,3 +177,23 @@ export class SuccessResultDTO {
   })
   success: boolean;
 }
+
+export class ChangePasswordDTO {
+  @ApiProperty({
+    description: 'Current password',
+    example: 'currentPassword123',
+    type: String,
+  })
+  @IsString()
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @ApiProperty({
+    description: 'New password',
+    example: 'newPassword123',
+    type: String,
+  })
+  @IsString()
+  @IsNotEmpty()
+  newPassword: string;
+}

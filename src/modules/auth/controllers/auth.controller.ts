@@ -9,6 +9,8 @@ import {
   HttpStatus,
   Query,
   UnauthorizedException,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { env } from 'src/constants/environment.constant';
@@ -34,9 +36,11 @@ import {
   SuccessResultDTO,
   TokenRefreshResponseDTO,
   UserSignupRequestDTO,
+  ChangePasswordDTO,
 } from '../dtos/auth.dto';
 import { IAuthLoginRequest } from '../interfaces/auth.interface';
 import { MembershipLevel } from 'src/constants/enum/membership.enum';
+import { AuthGuard } from 'src/middleware/guards/auth.guard';
 
 @ApiBearerAuth()
 @ApiTags('Auth')
@@ -293,6 +297,56 @@ export class AuthController {
         throw error;
       }
       throw new BadRequestException('Reset password failed');
+    }
+  }
+
+  @Post('change-password')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password successfully changed',
+    type: SuccessResultDTO,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid current password or new password',
+  })
+  async changePassword(
+    @Body() body: ChangePasswordDTO,
+    @Request() req: any,
+  ): Promise<SuccessResultDTO> {
+    try {
+      const userId = req.user.id;
+      const { currentPassword, newPassword } = body;
+
+      const user = await this.userService.findById(userId);
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+
+      const isPasswordValid = await this.authService.comparePasswords(
+        currentPassword,
+        user.password,
+      );
+
+      if (!isPasswordValid) {
+        throw new BadRequestException('Invalid current password');
+      }
+
+      await this.userService.update(userId, { password: newPassword });
+
+      this.logger.log(`Password changed successfully for user: ${user.email}`);
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error('Change password failed', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Change password failed');
     }
   }
 }
