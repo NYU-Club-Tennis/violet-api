@@ -286,3 +286,11 @@ export class EmailsByRolesResponseDto {
   })
   emails: string[];
 }
+
+export class UserExistsResponseDto {
+  @ApiProperty({
+    description: 'Whether a user with this email exists',
+    example: true,
+  })
+  exists: boolean;
+}

@@ -198,6 +198,75 @@ export class SessionService {
     return { count };
   }
 
+  async getUserSessions(
+    userId: number,
+    type: 'upcoming' | 'past',
+  ): Promise<Session[]> {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    const queryBuilder = this.sessionRepository
+      .createQueryBuilder('session')
+      .innerJoin('session.registrations', 'registration')
+      .where('registration.userId = :userId', { userId })
+      .andWhere('registration.deletedAt IS NULL')
+      .andWhere('session.deletedAt IS NULL');
+
+    if (type === 'upcoming') {
+      // Sessions that are today or in the future
+      queryBuilder.andWhere(
+        '(session.date > :today OR (session.date = :today AND session.time > :currentTime))',
+        {
+          today,
+          currentTime: now.toTimeString().slice(0, 5), // HH:MM format
+        },
+      );
+    } else if (type === 'past') {
+      // Sessions that are in the past
+      queryBuilder.andWhere(
+        '(session.date < :today OR (session.date = :today AND session.time <= :currentTime))',
+        {
+          today,
+          currentTime: now.toTimeString().slice(0, 5), // HH:MM format
+        },
+      );
+    }
+
+    queryBuilder
+      .orderBy('session.date', 'ASC')
+      .addOrderBy('session.time', 'ASC');
+
+    return queryBuilder.getMany();
+  }
+
+  async cancelSessionRegistration(
+    sessionId: number,
+    userId: number,
+  ): Promise<{ success: boolean }> {
+    // Find the registration for this user and session
+    const registration = await this.registrationRepository.findOne({
+      where: {
+        sessionId,
+        userId,
+        deletedAt: IsNull(),
+      },
+    });
+
+    if (!registration) {
+      throw new NotFoundException('Registration not found for this session');
+    }
+
+    // Soft delete the registration
+    await this.registrationRepository.softDelete(registration.id);
+
+    // Update the session's available spots
+    const session = await this.findOne(sessionId);
+    session.spotsAvailable += 1;
+    await this.sessionRepository.save(session);
+
+    return { success: true };
+  }
+
   private isValidDate(date: string): boolean {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD format
     return dateRegex.test(date) && !isNaN(Date.parse(date));
@@ -207,5 +276,42 @@ export class SessionService {
   private formatTime(time: string): string {
     // Add any time formatting logic you need
     return time;
+  }
+
+  /**
+   * Automatically close past sessions by updating their status to CLOSED
+   * This method is designed to be called by a cron job
+   */
+  async closePastSessions(): Promise<{ closedCount: number; message: string }> {
+    try {
+      const now = new Date();
+      const today = now.toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
+
+      // Find all open sessions that have passed their date
+      const result = await this.sessionRepository
+        .createQueryBuilder('session')
+        .update()
+        .set({ status: SessionStatus.CLOSED })
+        .where('session.date < :today', { today })
+        .andWhere('session.status = :openStatus', {
+          openStatus: SessionStatus.OPEN,
+        })
+        .andWhere('deletedAt IS NULL')
+        .execute();
+
+      const closedCount = result.affected || 0;
+
+      console.log(
+        `Automatically closed ${closedCount} past sessions on ${today}`,
+      );
+
+      return {
+        closedCount,
+        message: `Successfully closed ${closedCount} past sessions`,
+      };
+    } catch (error) {
+      console.error('Error closing past sessions:', error);
+      throw new InternalServerErrorException('Failed to close past sessions');
+    }
   }
 }

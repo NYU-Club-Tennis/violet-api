@@ -99,10 +99,10 @@ export class SessionDTO implements ISession {
   notes?: string;
 
   @ApiProperty({
-    description: 'Registration information for the session',
-    type: () => Registration,
+    description: 'Registrations for the session',
+    type: () => [Registration],
   })
-  registration: Registration;
+  registrations: Registration[];
 }
 
 export class CreateSessionDto {

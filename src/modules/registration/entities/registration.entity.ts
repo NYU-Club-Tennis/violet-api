@@ -40,11 +40,11 @@ export class Registration extends BaseEntity implements IRegistration {
   })
   status: RegistrationStatus;
 
-  @ManyToOne(() => Session, (session) => session.id)
+  @ManyToOne(() => Session, (session) => session.registrations)
   @JoinColumn({ name: 'sessionId' })
   session: Session;
 
-  @ManyToOne(() => User, (user) => user.id)
+  @ManyToOne(() => User, (user) => user.registrations)
   @JoinColumn({ name: 'userId' })
   user: User;
 }

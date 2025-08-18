@@ -49,9 +49,6 @@ export class User extends BaseEntity implements IUser {
   @Column({ type: 'timestamptz', nullable: true, default: null })
   lastSignInAt?: string;
 
-  @OneToMany(() => Registration, (registration) => registration.id)
-  @JoinColumn({
-    name: 'registrationId',
-  })
-  registration: Registration;
+  @OneToMany(() => Registration, (registration) => registration.user)
+  registrations: Registration[];
 }
