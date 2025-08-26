@@ -18,7 +18,7 @@ export interface ISession extends IBaseEntity {
   spotsTotal: number;
   status: SessionStatus;
   notes?: string;
-  registration: Registration;
+  registrations: Registration[];
 }
 
 export interface ISessionCreate {
@@ -31,7 +31,7 @@ export interface ISessionCreate {
   spotsTotal: number;
   status?: SessionStatus;
   notes?: string;
-  registration?: Registration;
+  registrations?: Registration[];
 }
 
 export interface ISessionPaginateQuery extends IPaginateQuery {

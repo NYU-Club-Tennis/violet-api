@@ -50,9 +50,6 @@ export class Session extends BaseEntity implements ISession {
   })
   notes: string;
 
-  @OneToMany(() => Registration, (registration) => registration.id)
-  @JoinColumn({
-    name: 'registrationId',
-  })
-  registration: Registration;
+  @OneToMany(() => Registration, (registration) => registration.session)
+  registrations: Registration[];
 }

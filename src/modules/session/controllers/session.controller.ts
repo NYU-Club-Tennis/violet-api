@@ -28,6 +28,7 @@ import {
 import { AuthGuard } from 'src/middleware/guards/auth.guard';
 import { Roles } from 'src/middleware/decorators/roles.decorator';
 import { Role } from 'src/constants/enum/roles.enum';
+import { Request } from '@nestjs/common';
 
 @ApiTags('Sessions')
 @Controller('session')
@@ -157,5 +158,78 @@ export class SessionController {
   })
   async getActiveSessionsCount(): Promise<SessionCountResponseDto> {
     return this.sessionService.getActiveSessionsCount();
+  }
+
+  @Get('user/:userId/:type')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get user sessions by type (upcoming or past)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns user sessions',
+    type: [SessionResponseDto],
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 400, description: 'Invalid type parameter.' })
+  async getUserSessions(
+    @Param('userId') userId: string,
+    @Param('type') type: string,
+  ): Promise<Session[]> {
+    if (type !== 'upcoming' && type !== 'past') {
+      throw new Error('Type must be either "upcoming" or "past"');
+    }
+    return this.sessionService.getUserSessions(
+      +userId,
+      type as 'upcoming' | 'past',
+    );
+  }
+
+  @Delete(':sessionId/registration')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cancel session registration for current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Registration cancelled successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'Registration not found.' })
+  async cancelSessionRegistration(
+    @Param('sessionId') sessionId: string,
+    @Request() req: any,
+  ): Promise<{ success: boolean }> {
+    const userId = req.user.id;
+    return this.sessionService.cancelSessionRegistration(+sessionId, userId);
+  }
+
+  @Post('close-past-sessions')
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Manually trigger closing of past sessions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Past sessions have been closed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        closedCount: { type: 'number' },
+        message: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async closePastSessions(): Promise<{ closedCount: number; message: string }> {
+    return this.sessionService.closePastSessions();
   }
 }

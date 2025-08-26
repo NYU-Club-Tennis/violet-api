@@ -25,6 +25,7 @@ import {
   UpdateMembershipLevelDto,
   UserSearchQueryDto,
   UserSearchResponseDto,
+  UserExistsResponseDto,
 } from '../dto/users.dto';
 
 import * as dayjs from 'dayjs';
@@ -47,6 +48,23 @@ export class UserController {
     private readonly logger: AppLogger,
   ) {
     this.logger.setContext(UserController.name);
+  }
+
+  @Get('exists')
+  @ApiOperation({ summary: 'Check if a user exists by email' })
+  @ApiResponse({
+    status: 200,
+    description: 'Whether a user exists with this email',
+    type: UserExistsResponseDto,
+  })
+  async checkUserExists(
+    @Query('email') email: string,
+  ): Promise<UserExistsResponseDto> {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+    const exists = await this.userService.isEmailExisted(email);
+    return { exists };
   }
 
   @Get('current')
@@ -171,23 +189,56 @@ export class UserController {
     status: 403,
     description: 'Forbidden - Requires admin access.',
   })
-  @ApiResponse({ status: 404, description: 'User not found.' })
   async updateMembershipLevel(
     @Param('id') id: number,
     @Body() updateMembershipLevelDto: UpdateMembershipLevelDto,
     @Request() req,
   ): Promise<UserResponseDto> {
-    // Prevent users from changing their own membership level
-    if (req.user.id === id) {
-      throw new BadRequestException(
-        'You cannot change your own membership level. Please ask another admin to do this for you.',
-      );
-    }
-
     const updatedUser = await this.userService.updateMembershipLevel(
       id,
       updateMembershipLevelDto.membershipLevel,
     );
+
+    return {
+      id: updatedUser.id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      isAdmin: updatedUser.isAdmin,
+      membershipLevel: updatedUser.membershipLevel,
+      noShowCount: updatedUser.noShowCount,
+      lastSignInAt: updatedUser.lastSignInAt,
+      createdAt: updatedUser.createdAt || '',
+      updatedAt: updatedUser.updatedAt || '',
+      avatarUrl: updatedUser.avatarUrl,
+    };
+  }
+
+  @Patch(':id')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Update user profile information' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile updated successfully',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - User can only update their own profile.',
+  })
+  async updateUser(
+    @Param('id') id: number,
+    @Body() updateUserDto: Partial<UserResponseDto>,
+    @Request() req,
+  ): Promise<UserResponseDto> {
+    // Ensure users can only update their own profile
+    if (req.user.id !== id && !req.user.isAdmin) {
+      throw new BadRequestException('You can only update your own profile');
+    }
+
+    const updatedUser = await this.userService.update(id, updateUserDto);
 
     return {
       id: updatedUser.id,
