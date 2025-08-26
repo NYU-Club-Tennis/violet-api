@@ -24,8 +24,15 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
   app.enableCors({
+    origin: [
+      'https://nyuclubtennis-dev.vercel.app',
+      'https://nyuclubtennis.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+    ],
     methods: 'GET,PUT,PATCH,POST,DELETE',
     exposedHeaders: ['Content-Disposition', 'Retry-After'],
+    credentials: true,
   });
 
   app.use(express.json({ limit: '100mb' }));
