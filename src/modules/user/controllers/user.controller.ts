@@ -23,6 +23,7 @@ import {
   UpdateUserRoleDto,
   EmailsByRolesResponseDto,
   UpdateMembershipLevelDto,
+  UpdateUserBanStatusDto,
   UserSearchQueryDto,
   UserSearchResponseDto,
   UserExistsResponseDto,
@@ -105,6 +106,7 @@ export class UserController {
       isAdmin: user.isAdmin,
       membershipLevel: user.membershipLevel,
       noShowCount: user.noShowCount,
+      isBanned: user.isBanned,
       lastSignInAt: user.lastSignInAt,
       createdAt: user.createdAt || '',
       updatedAt: user.updatedAt || '',
@@ -168,6 +170,7 @@ export class UserController {
       isAdmin: updatedUser.isAdmin,
       membershipLevel: updatedUser.membershipLevel,
       noShowCount: updatedUser.noShowCount,
+      isBanned: updatedUser.isBanned,
       lastSignInAt: updatedUser.lastSignInAt,
       createdAt: updatedUser.createdAt || '',
       updatedAt: updatedUser.updatedAt || '',
@@ -208,6 +211,56 @@ export class UserController {
       isAdmin: updatedUser.isAdmin,
       membershipLevel: updatedUser.membershipLevel,
       noShowCount: updatedUser.noShowCount,
+      isBanned: updatedUser.isBanned,
+      lastSignInAt: updatedUser.lastSignInAt,
+      createdAt: updatedUser.createdAt || '',
+      updatedAt: updatedUser.updatedAt || '',
+      avatarUrl: updatedUser.avatarUrl,
+    };
+  }
+
+  @Patch(':id/ban-status')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update user ban status (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'User ban status updated successfully',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  async updateUserBanStatus(
+    @Param('id') id: number,
+    @Body() updateUserBanStatusDto: UpdateUserBanStatusDto,
+    @Request() req,
+  ): Promise<UserResponseDto> {
+    // Prevent users from changing their own ban status
+    if (req.user.id === id) {
+      throw new BadRequestException(
+        'You cannot change your own ban status. Please ask another admin to do this for you.',
+      );
+    }
+
+    const updatedUser = await this.userService.updateUserBanStatus(
+      id,
+      updateUserBanStatusDto.isBanned,
+    );
+
+    return {
+      id: updatedUser.id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      isAdmin: updatedUser.isAdmin,
+      membershipLevel: updatedUser.membershipLevel,
+      noShowCount: updatedUser.noShowCount,
+      isBanned: updatedUser.isBanned,
       lastSignInAt: updatedUser.lastSignInAt,
       createdAt: updatedUser.createdAt || '',
       updatedAt: updatedUser.updatedAt || '',
@@ -249,6 +302,7 @@ export class UserController {
       isAdmin: updatedUser.isAdmin,
       membershipLevel: updatedUser.membershipLevel,
       noShowCount: updatedUser.noShowCount,
+      isBanned: updatedUser.isBanned,
       lastSignInAt: updatedUser.lastSignInAt,
       createdAt: updatedUser.createdAt || '',
       updatedAt: updatedUser.updatedAt || '',
