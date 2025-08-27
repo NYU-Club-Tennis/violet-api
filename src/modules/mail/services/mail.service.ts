@@ -12,13 +12,17 @@ import {
   SendWelcomeEmailDto,
   SendSessionConfirmationDto,
 } from '../dtos/mail.dto';
+import { UserService } from 'src/modules/user/services/user.service';
 
 @Injectable()
 export class MailService {
   private transporter: nodemailer.Transporter;
   private readonly frontendUrl: string = env.url.frontend as string;
 
-  constructor(private readonly logger: AppLogger) {
+  constructor(
+    private readonly logger: AppLogger,
+    private readonly userService: UserService,
+  ) {
     this.logger.setContext(MailService.name);
     this.initializeTransporter();
   }
@@ -37,6 +41,99 @@ export class MailService {
         rejectUnauthorized: false, // Allow self-signed certificates
       },
     });
+  }
+
+  /**
+   * Filter emails based on user preferences
+   * @param emails List of email addresses to filter
+   * @param notificationType Type of notification ('session' or 'club')
+   * @returns Filtered list of emails that have enabled the specific notification type
+   */
+  private async filterEmailsByPreferences(
+    emails: string[],
+    notificationType: 'session' | 'club',
+  ): Promise<string[]> {
+    try {
+      if (emails.length === 0) return [];
+
+      // Get users with their email preferences
+      const users = await this.userService.findByEmails(emails);
+
+      const filteredEmails = users
+        .filter((user) => {
+          if (notificationType === 'session') {
+            return user.emailSessionNotifications;
+          } else {
+            return user.emailClubAnnouncements;
+          }
+        })
+        .map((user) => user.email);
+
+      this.logger.log(
+        `Filtered ${emails.length} emails to ${filteredEmails.length} based on ${notificationType} preferences`,
+      );
+
+      return filteredEmails;
+    } catch (error) {
+      this.logger.error(
+        `Error filtering emails by preferences: ${error.message}`,
+      );
+      // If filtering fails, return original list to avoid blocking email sending
+      return emails;
+    }
+  }
+
+  /**
+   * Send email with preference filtering
+   * @param options Mail options
+   * @param notificationType Type of notification for preference filtering
+   * @returns Mail response
+   */
+  async sendMailWithPreferences(
+    options: SendMailDto,
+    notificationType: 'session' | 'club',
+  ): Promise<IMailResponse> {
+    try {
+      // Filter emails based on user preferences
+      const filteredEmails = await this.filterEmailsByPreferences(
+        options.to,
+        notificationType,
+      );
+
+      if (filteredEmails.length === 0) {
+        this.logger.log(
+          `No recipients found after filtering for ${notificationType} notifications`,
+        );
+        return {
+          messageId: undefined,
+          accepted: [],
+          rejected: [],
+          response: 'No recipients found after preference filtering',
+        };
+      }
+
+      // Send email to filtered recipients
+      const mailOptions: IMailOptions = {
+        from: env.mail.from ?? 'noreply@nyutennis.com',
+        ...options,
+        to: filteredEmails,
+      };
+
+      const info = await this.transporter.sendMail(mailOptions);
+      this.logger.log(
+        `Email sent with preferences: ${info.messageId} to ${filteredEmails.length} recipients`,
+      );
+
+      return {
+        messageId: info.messageId,
+        accepted: info.accepted,
+        rejected: info.rejected,
+        response: info.response,
+      };
+    } catch (error) {
+      this.logger.error('Failed to send email with preferences', error);
+      throw error;
+    }
   }
 
   async sendMail(options: SendMailDto): Promise<IMailResponse> {
@@ -218,6 +315,90 @@ export class MailService {
       </html>
     `;
 
-    return this.sendMail({ to: emails, subject, html });
+    // Use preference filtering for club announcements
+    return this.sendMailWithPreferences({ to: emails, subject, html }, 'club');
+  }
+
+  /**
+   * Send session-related notifications with preference filtering
+   * @param emails List of recipient emails
+   * @param subject Email subject
+   * @param body Email body content
+   * @returns Mail response
+   */
+  async sendSessionNotification(
+    emails: string[],
+    subject: string,
+    body: string,
+  ): Promise<IMailResponse> {
+    // Create HTML template for session notifications
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background-color: #57068c; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+              <h1 style="color: white; margin: 0;">NYU Tennis Club</h1>
+            </div>
+            <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <h2 style="color: #333; margin-top: 0;">Session Update</h2>
+              <div style="color: #666; font-size: 16px; line-height: 1.5; white-space: pre-wrap;">${body}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Use preference filtering for session notifications
+    return this.sendMailWithPreferences(
+      { to: emails, subject, html },
+      'session',
+    );
+  }
+
+  async sendWaitlistNotification(
+    type: 'added' | 'promoted',
+    to: string,
+    session: { name: string; date: string; time: string; location: string },
+    extras?: { position?: number },
+  ): Promise<IMailResponse> {
+    const { name, date, time, location } = session;
+
+    let subject = '';
+    let header = '';
+    let body = '';
+
+    if (type === 'added') {
+      subject = `You're on the waitlist: ${name}`;
+      header = 'You have been added to the waitlist';
+      body = `You are now on the waitlist for "${name}".\n\nDate: ${new Date(date).toLocaleDateString()}\nTime: ${time}\nLocation: ${location}`;
+      if (extras?.position) {
+        body += `\nYour position: ${extras.position}`;
+      }
+      body += `\n\nYou'll be notified if a spot opens up.`;
+    } else if (type === 'promoted') {
+      subject = `You got a spot: ${name}`;
+      header = 'Great news! You have been registered';
+      body = `A spot opened up and you are now registered for "${name}".\n\nDate: ${new Date(date).toLocaleDateString()}\nTime: ${time}\nLocation: ${location}\n\nIf you can no longer attend, please cancel to free the spot for others.`;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f4f4f4;">
+          <div style="max-width:600px;margin:0 auto;padding:20px;">
+            <div style="background-color:#57068c;padding:20px;text-align:center;border-radius:8px 8px 0 0;">
+              <h1 style="color:white;margin:0;">NYU Tennis Club</h1>
+            </div>
+            <div style="background-color:white;padding:30px;border-radius:0 0 8px 8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+              <h2 style="color:#333;margin-top:0;">${header}</h2>
+              <div style="color:#666;font-size:16px;line-height:1.5;white-space:pre-wrap;">${body}</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return this.sendMailWithPreferences({ to: [to], subject, html }, 'session');
   }
 }

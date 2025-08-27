@@ -17,6 +17,8 @@ export interface IUser extends IBaseEntity {
   membershipLevel: MembershipLevel;
   noShowCount: number;
   isBanned: boolean;
+  emailSessionNotifications: boolean;
+  emailClubAnnouncements: boolean;
   lastSignInAt?: string;
 }
 

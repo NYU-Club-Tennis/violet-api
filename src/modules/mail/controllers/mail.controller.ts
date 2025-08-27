@@ -82,10 +82,12 @@ export class MailController {
   @Post('bulk-announcement')
   @UseGuards(AuthGuard)
   @Roles(Role.ADMIN)
-  @ApiOperation({ summary: 'Send bulk announcement email (Admin only)' })
+  @ApiOperation({
+    summary: 'Send bulk announcement to multiple users (Admin only)',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Bulk announcement emails sent successfully',
+    description: 'Bulk announcement sent successfully',
     type: Object,
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
@@ -94,13 +96,42 @@ export class MailController {
     description: 'Forbidden - Requires admin access.',
   })
   async sendBulkAnnouncement(
-    @Body() dto: BulkAnnouncementDto,
+    @Body() bulkAnnouncementDto: BulkAnnouncementDto,
   ): Promise<IMailResponse> {
     return this.mailService.sendBulkAnnouncement(
-      dto.emails,
-      dto.header,
-      dto.subject,
-      dto.body,
+      bulkAnnouncementDto.emails,
+      bulkAnnouncementDto.header,
+      bulkAnnouncementDto.subject,
+      bulkAnnouncementDto.body,
+    );
+  }
+
+  @Post('session-notification')
+  @UseGuards(AuthGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Send session notification to users (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session notification sent successfully',
+    type: Object,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Requires admin access.',
+  })
+  async sendSessionNotification(
+    @Body()
+    sessionNotificationDto: {
+      emails: string[];
+      subject: string;
+      body: string;
+    },
+  ): Promise<IMailResponse> {
+    return this.mailService.sendSessionNotification(
+      sessionNotificationDto.emails,
+      sessionNotificationDto.subject,
+      sessionNotificationDto.body,
     );
   }
 }

@@ -23,6 +23,7 @@ import {
   ISessionCountResponse,
 } from '../interfaces/session.interface';
 import { SessionStatus } from 'src/constants/enum/session.enum';
+import { MailService } from '../../mail/services/mail.service';
 
 @Injectable()
 export class SessionService {
@@ -31,6 +32,7 @@ export class SessionService {
     private sessionRepository: Repository<Session>,
     @InjectRepository(Registration)
     private registrationRepository: Repository<Registration>,
+    private mailService: MailService,
   ) {}
   async findAll(): Promise<Session[]> {
     return this.sessionRepository.find({
@@ -66,6 +68,9 @@ export class SessionService {
       throw new NotFoundException(`Session with ID ${id} not found`);
     }
 
+    // Send cancellation notification before deleting
+    await this.sendSessionCancellationNotification(id);
+
     // First, soft delete all associated registrations (only non-deleted ones)
     const registrations = await this.registrationRepository.find({
       where: { sessionId: id, deletedAt: IsNull() },
@@ -99,8 +104,172 @@ export class SessionService {
 
   async update(id: number, params: Partial<ISession>): Promise<Session> {
     const session = await this.findById(id);
-    const updatedSession = this.sessionRepository.merge(session, params);
-    return this.sessionRepository.save(updatedSession);
+    if (!session) {
+      throw new NotFoundException(`Session with ID ${id} not found`);
+    }
+
+    // Handle automatic spots management for status changes
+    if (params.status) {
+      if (params.status === 'FULL' || params.status === 'CLOSED') {
+        // Set spots available to 0 for FULL and CLOSED statuses
+        params.spotsAvailable = 0;
+      }
+      // For OPEN and VIEW_ONLY, keep current spots available
+    }
+
+    // If spots are being reduced, check if it affects existing registrations
+    if (
+      params.spotsTotal !== undefined &&
+      params.spotsTotal < session.spotsTotal
+    ) {
+      const spotsReduction = session.spotsTotal - params.spotsTotal;
+      const currentRegistrations = await this.registrationRepository.count({
+        where: { sessionId: id, deletedAt: IsNull() },
+      });
+
+      if (currentRegistrations > params.spotsTotal) {
+        throw new InternalServerErrorException(
+          `Cannot reduce spots to ${params.spotsTotal} as there are already ${currentRegistrations} registrations`,
+        );
+      }
+
+      // Update available spots accordingly
+      params.spotsAvailable = Math.max(
+        0,
+        session.spotsAvailable - spotsReduction,
+      );
+    }
+
+    Object.assign(session, params);
+    const updatedSession = await this.sessionRepository.save(session);
+
+    // Reload full session to ensure all fields (like name) are present
+    const fullSession = await this.findById(updatedSession.id);
+
+    // Send notification if session details changed significantly
+    await this.sendSessionUpdateNotification(fullSession, params);
+
+    return updatedSession;
+  }
+
+  /**
+   * Send notification when session details are updated
+   */
+  private async sendSessionUpdateNotification(
+    session: Session,
+    changes: Partial<ISession>,
+  ): Promise<void> {
+    try {
+      // Get registered users for this session
+      const registrations = await this.registrationRepository.find({
+        where: { sessionId: session.id, deletedAt: IsNull() },
+        relations: ['user'],
+      });
+
+      if (registrations.length === 0) return;
+
+      const userEmails = registrations
+        .map((reg) => reg.user?.email)
+        .filter(Boolean) as string[];
+
+      // Determine what changed and create appropriate message
+      let notificationBody = '';
+      let subject = '';
+
+      // Check for status changes first
+      if (changes.status) {
+        subject = 'Session Updated';
+        notificationBody = `The session "${session.name}" has been updated:\n\n`;
+
+        // Add status change information
+        const statusDescriptions = {
+          OPEN: 'Open for registrations',
+          FULL: 'Full but waitlist available',
+          VIEW_ONLY: 'View only - no new registrations',
+          CLOSED: 'Closed - no registrations or waitlist',
+        };
+
+        notificationBody += `Status: ${statusDescriptions[changes.status] || changes.status}\n`;
+      }
+
+      // Add other change information
+      if (changes.date || changes.time) {
+        if (!subject) {
+          subject = 'Session Time/Date Updated';
+          notificationBody = `The session "${session.name}" has been updated:\n\n`;
+        }
+        if (changes.date) {
+          notificationBody += `New Date: ${new Date(changes.date).toLocaleDateString()}\n`;
+        }
+        if (changes.time) {
+          notificationBody += `New Time: ${changes.time}\n`;
+        }
+      }
+
+      if (changes.location) {
+        if (!subject) {
+          subject = 'Session Location Updated';
+          notificationBody = `The session "${session.name}" has been updated:\n\n`;
+        }
+        notificationBody += `New Location: ${changes.location}\n`;
+      }
+
+      if (changes.spotsTotal) {
+        if (!subject) {
+          subject = 'Session Capacity Updated';
+          notificationBody = `The session "${session.name}" has been updated:\n\n`;
+        }
+        notificationBody += `New Capacity: ${changes.spotsTotal} spots\n`;
+      }
+
+      // Add closing message
+      if (notificationBody) {
+        notificationBody += `\nPlease check the updated session details.`;
+      }
+
+      if (notificationBody && userEmails.length > 0) {
+        await this.mailService.sendSessionNotification(
+          userEmails,
+          subject,
+          notificationBody,
+        );
+      }
+    } catch (error) {
+      // Log error but don't fail the session update
+      console.error('Failed to send session update notification:', error);
+    }
+  }
+
+  /**
+   * Send notification when session is cancelled
+   */
+  async sendSessionCancellationNotification(sessionId: number): Promise<void> {
+    try {
+      const session = await this.findById(sessionId);
+      const registrations = await this.registrationRepository.find({
+        where: { sessionId, deletedAt: IsNull() },
+        relations: ['user'],
+      });
+
+      if (registrations.length === 0) return;
+
+      const userEmails = registrations
+        .map((reg) => reg.user?.email)
+        .filter(Boolean) as string[];
+
+      const subject = 'Session Cancelled';
+      const body = `The session "${session.name}" scheduled for ${new Date(session.date).toLocaleDateString()} at ${session.time} has been cancelled.\n\nWe apologize for any inconvenience.`;
+
+      if (userEmails.length > 0) {
+        await this.mailService.sendSessionNotification(
+          userEmails,
+          subject,
+          body,
+        );
+      }
+    } catch (error) {
+      console.error('Failed to send session cancellation notification:', error);
+    }
   }
 
   async findPaginate(query: ISessionPaginateQuery) {
