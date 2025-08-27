@@ -138,10 +138,13 @@ export class UserService {
         email: true,
         phoneNumber: true,
         isAdmin: true,
+        membershipLevel: true,
         noShowCount: true,
+        isBanned: true,
         lastSignInAt: true,
         createdAt: true,
         updatedAt: true,
+        avatarUrl: true,
         // Exclude password from results
       },
     };
