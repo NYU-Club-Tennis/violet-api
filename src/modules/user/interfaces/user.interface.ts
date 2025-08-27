@@ -16,6 +16,7 @@ export interface IUser extends IBaseEntity {
   isAdmin: boolean;
   membershipLevel: MembershipLevel;
   noShowCount: number;
+  isBanned: boolean;
   lastSignInAt?: string;
 }
 

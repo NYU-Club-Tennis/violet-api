@@ -84,6 +84,15 @@ export class UserDTO {
   membershipLevel: MembershipLevel;
 
   @ApiProperty({
+    description: 'Whether the user is banned',
+    example: false,
+    type: Boolean,
+    default: false,
+  })
+  @IsBoolean()
+  isBanned: boolean;
+
+  @ApiProperty({
     description:
       'Number of times the user has not shown up to registered sessions',
     example: 0,
@@ -210,6 +219,17 @@ export class UpdateMembershipLevelDto {
   @IsEnum(MembershipLevel)
   @IsNotEmpty()
   membershipLevel: MembershipLevel;
+}
+
+export class UpdateUserBanStatusDto {
+  @ApiProperty({
+    description: 'Whether the user should be banned',
+    example: true,
+    type: Boolean,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  isBanned: boolean;
 }
 
 export class UserSearchQueryDto {

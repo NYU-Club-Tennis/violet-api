@@ -201,16 +201,23 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
-  async updateMembershipLevel(
-    userId: number,
-    membershipLevel: MembershipLevel,
-  ): Promise<User> {
-    const user = await this.findById(userId);
+  async updateMembershipLevel(id: number, membershipLevel: MembershipLevel) {
+    const user = await this.findById(id);
     if (!user) {
       throw new Error('User not found');
     }
 
     user.membershipLevel = membershipLevel;
+    return this.usersRepository.save(user);
+  }
+
+  async updateUserBanStatus(id: number, isBanned: boolean) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    user.isBanned = isBanned;
     return this.usersRepository.save(user);
   }
 

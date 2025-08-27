@@ -46,6 +46,9 @@ export class User extends BaseEntity implements IUser {
   @Column({ default: 0 })
   noShowCount: number;
 
+  @Column({ default: false })
+  isBanned: boolean;
+
   @Column({ type: 'timestamptz', nullable: true, default: null })
   lastSignInAt?: string;
 
