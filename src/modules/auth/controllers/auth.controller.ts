@@ -142,6 +142,8 @@ export class AuthController {
         isBanned: false,
         noShowCount: 0,
         membershipLevel: MembershipLevel.USER,
+        emailSessionNotifications: true,
+        emailClubAnnouncements: true,
       });
 
       const authUser = await this.authService.userLogin({

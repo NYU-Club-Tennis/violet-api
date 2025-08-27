@@ -102,6 +102,24 @@ export class UserDTO {
   @IsNumber()
   @Min(0)
   noShowCount: number;
+
+  @ApiProperty({
+    description: 'Whether to receive session-related notifications',
+    example: true,
+    type: Boolean,
+    default: true,
+  })
+  @IsBoolean()
+  emailSessionNotifications: boolean;
+
+  @ApiProperty({
+    description: 'Whether to receive club announcements',
+    example: true,
+    type: Boolean,
+    default: true,
+  })
+  @IsBoolean()
+  emailClubAnnouncements: boolean;
 }
 
 export class UserCountResponseDto {
@@ -313,4 +331,24 @@ export class UserExistsResponseDto {
     example: true,
   })
   exists: boolean;
+}
+
+export class UpdateEmailPreferencesDto {
+  @ApiProperty({
+    description: 'Whether to receive session-related notifications',
+    example: true,
+    type: Boolean,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  emailSessionNotifications: boolean;
+
+  @ApiProperty({
+    description: 'Whether to receive club announcements',
+    example: true,
+    type: Boolean,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  emailClubAnnouncements: boolean;
 }

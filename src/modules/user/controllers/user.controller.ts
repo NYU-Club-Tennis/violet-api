@@ -24,6 +24,7 @@ import {
   EmailsByRolesResponseDto,
   UpdateMembershipLevelDto,
   UpdateUserBanStatusDto,
+  UpdateEmailPreferencesDto,
   UserSearchQueryDto,
   UserSearchResponseDto,
   UserExistsResponseDto,
@@ -107,6 +108,8 @@ export class UserController {
       membershipLevel: user.membershipLevel,
       noShowCount: user.noShowCount,
       isBanned: user.isBanned,
+      emailSessionNotifications: user.emailSessionNotifications,
+      emailClubAnnouncements: user.emailClubAnnouncements,
       lastSignInAt: user.lastSignInAt,
       createdAt: user.createdAt || '',
       updatedAt: user.updatedAt || '',
@@ -171,6 +174,8 @@ export class UserController {
       membershipLevel: updatedUser.membershipLevel,
       noShowCount: updatedUser.noShowCount,
       isBanned: updatedUser.isBanned,
+      emailSessionNotifications: updatedUser.emailSessionNotifications,
+      emailClubAnnouncements: updatedUser.emailClubAnnouncements,
       lastSignInAt: updatedUser.lastSignInAt,
       createdAt: updatedUser.createdAt || '',
       updatedAt: updatedUser.updatedAt || '',
@@ -212,6 +217,8 @@ export class UserController {
       membershipLevel: updatedUser.membershipLevel,
       noShowCount: updatedUser.noShowCount,
       isBanned: updatedUser.isBanned,
+      emailSessionNotifications: updatedUser.emailSessionNotifications,
+      emailClubAnnouncements: updatedUser.emailClubAnnouncements,
       lastSignInAt: updatedUser.lastSignInAt,
       createdAt: updatedUser.createdAt || '',
       updatedAt: updatedUser.updatedAt || '',
@@ -261,6 +268,53 @@ export class UserController {
       membershipLevel: updatedUser.membershipLevel,
       noShowCount: updatedUser.noShowCount,
       isBanned: updatedUser.isBanned,
+      emailSessionNotifications: updatedUser.emailSessionNotifications,
+      emailClubAnnouncements: updatedUser.emailClubAnnouncements,
+      lastSignInAt: updatedUser.lastSignInAt,
+      createdAt: updatedUser.createdAt || '',
+      updatedAt: updatedUser.updatedAt || '',
+      avatarUrl: updatedUser.avatarUrl,
+    };
+  }
+
+  @Patch(':id/email-preferences')
+  @UseGuards(AuthGuard)
+  @ApiOperation({ summary: 'Update user email preferences' })
+  @ApiResponse({
+    status: 200,
+    description: 'User email preferences updated successfully',
+    type: UserResponseDto,
+  })
+  async updateEmailPreferences(
+    @Param('id') id: number,
+    @Body() updateEmailPreferencesDto: UpdateEmailPreferencesDto,
+    @Request() req,
+  ): Promise<UserResponseDto> {
+    // Users can only update their own email preferences
+    if (req.user.id !== id) {
+      throw new BadRequestException(
+        'You can only update your own email preferences.',
+      );
+    }
+
+    const updatedUser = await this.userService.updateEmailPreferences(
+      id,
+      updateEmailPreferencesDto.emailSessionNotifications,
+      updateEmailPreferencesDto.emailClubAnnouncements,
+    );
+
+    return {
+      id: updatedUser.id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      phoneNumber: updatedUser.phoneNumber,
+      isAdmin: updatedUser.isAdmin,
+      membershipLevel: updatedUser.membershipLevel,
+      noShowCount: updatedUser.noShowCount,
+      isBanned: updatedUser.isBanned,
+      emailSessionNotifications: updatedUser.emailSessionNotifications,
+      emailClubAnnouncements: updatedUser.emailClubAnnouncements,
       lastSignInAt: updatedUser.lastSignInAt,
       createdAt: updatedUser.createdAt || '',
       updatedAt: updatedUser.updatedAt || '',
@@ -303,6 +357,8 @@ export class UserController {
       membershipLevel: updatedUser.membershipLevel,
       noShowCount: updatedUser.noShowCount,
       isBanned: updatedUser.isBanned,
+      emailSessionNotifications: updatedUser.emailSessionNotifications,
+      emailClubAnnouncements: updatedUser.emailClubAnnouncements,
       lastSignInAt: updatedUser.lastSignInAt,
       createdAt: updatedUser.createdAt || '',
       updatedAt: updatedUser.updatedAt || '',

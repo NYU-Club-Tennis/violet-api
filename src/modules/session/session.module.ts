@@ -8,6 +8,7 @@ import { Session } from './entities/session.entity';
 import { Registration } from '../registration/entities/registration.entity';
 import { UserModule } from '../user/user.module';
 import { AuthModule } from '../auth/auth.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthModule } from '../auth/auth.module';
     ScheduleModule.forRoot(),
     UserModule,
     AuthModule,
+    MailModule,
   ],
   providers: [SessionService, SessionSchedulerService],
   controllers: [SessionController],

@@ -50,6 +50,20 @@ export class UserService {
     });
   }
 
+  async findByEmails(emails: string[]) {
+    if (emails.length === 0) return [];
+
+    return this.usersRepository.find({
+      where: emails.map((email) => ({ email })),
+      select: {
+        id: true,
+        email: true,
+        emailSessionNotifications: true,
+        emailClubAnnouncements: true,
+      },
+    });
+  }
+
   async findById(id: number, relations: string[] = []) {
     return this.usersRepository.findOne({
       where: {
@@ -141,6 +155,8 @@ export class UserService {
         membershipLevel: true,
         noShowCount: true,
         isBanned: true,
+        emailSessionNotifications: true,
+        emailClubAnnouncements: true,
         lastSignInAt: true,
         createdAt: true,
         updatedAt: true,
@@ -221,6 +237,21 @@ export class UserService {
     }
 
     user.isBanned = isBanned;
+    return this.usersRepository.save(user);
+  }
+
+  async updateEmailPreferences(
+    id: number,
+    emailSessionNotifications: boolean,
+    emailClubAnnouncements: boolean,
+  ) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    user.emailSessionNotifications = emailSessionNotifications;
+    user.emailClubAnnouncements = emailClubAnnouncements;
     return this.usersRepository.save(user);
   }
 
