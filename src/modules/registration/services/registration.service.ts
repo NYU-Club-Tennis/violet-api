@@ -312,14 +312,25 @@ export class RegistrationService {
       ? RegistrationStatus.COMPLETED
       : RegistrationStatus.NO_SHOW;
 
-    // If marked as no-show, increment the user's no-show count
-    if (!hasAttended) {
-      await this.userService.incrementNoShowCount(registration.userId);
-    }
-
     const savedRegistration =
       await this.registrationRepository.save(registration);
+
+    // Recalculate the user's no-show count to ensure accuracy
+    await this.recalculateUserNoShowCount(registration.userId);
+
     return this.toResponseDto(savedRegistration);
+  }
+
+  private async recalculateUserNoShowCount(userId: number): Promise<void> {
+    const noShowCount = await this.registrationRepository.count({
+      where: {
+        userId,
+        status: RegistrationStatus.NO_SHOW,
+      },
+    });
+
+    // Update the user's no-show count
+    await this.userService.updateNoShowCount(userId, noShowCount);
   }
 
   async getRegistrationsBySession(
@@ -347,11 +358,13 @@ export class RegistrationService {
         status: In([
           RegistrationStatus.REGISTERED,
           RegistrationStatus.WAITLISTED,
+          RegistrationStatus.COMPLETED,
+          RegistrationStatus.NO_SHOW,
         ]),
       },
       relations: ['user'],
       order: {
-        status: 'ASC', // REGISTERED first, then WAITLISTED
+        status: 'ASC', // REGISTERED first, then others
         position: 'ASC', // Then by position
         createdAt: 'ASC', // Then by creation time
       },

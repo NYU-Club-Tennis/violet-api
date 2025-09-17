@@ -125,6 +125,15 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
+  async updateNoShowCount(id: number, count: number) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    user.noShowCount = count;
+    return this.usersRepository.save(user);
+  }
+
   async delete(id: number) {
     const user = await this.findById(id);
     if (!user) {
