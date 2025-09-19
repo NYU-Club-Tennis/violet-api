@@ -16,7 +16,7 @@ export interface ISessionDetails {
 }
 
 export interface IMailResponse {
-  messageId: string;
+  messageId?: string;
   accepted: string[];
   rejected: string[];
   response: string;

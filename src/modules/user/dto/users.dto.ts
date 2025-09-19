@@ -84,6 +84,15 @@ export class UserDTO {
   membershipLevel: MembershipLevel;
 
   @ApiProperty({
+    description: 'Whether the user is banned',
+    example: false,
+    type: Boolean,
+    default: false,
+  })
+  @IsBoolean()
+  isBanned: boolean;
+
+  @ApiProperty({
     description:
       'Number of times the user has not shown up to registered sessions',
     example: 0,
@@ -93,6 +102,24 @@ export class UserDTO {
   @IsNumber()
   @Min(0)
   noShowCount: number;
+
+  @ApiProperty({
+    description: 'Whether to receive session-related notifications',
+    example: true,
+    type: Boolean,
+    default: true,
+  })
+  @IsBoolean()
+  emailSessionNotifications: boolean;
+
+  @ApiProperty({
+    description: 'Whether to receive club announcements',
+    example: true,
+    type: Boolean,
+    default: true,
+  })
+  @IsBoolean()
+  emailClubAnnouncements: boolean;
 }
 
 export class UserCountResponseDto {
@@ -212,6 +239,17 @@ export class UpdateMembershipLevelDto {
   membershipLevel: MembershipLevel;
 }
 
+export class UpdateUserBanStatusDto {
+  @ApiProperty({
+    description: 'Whether the user should be banned',
+    example: true,
+    type: Boolean,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  isBanned: boolean;
+}
+
 export class UserSearchQueryDto {
   @ApiProperty({
     description: 'Search term to find users by name or email',
@@ -293,4 +331,24 @@ export class UserExistsResponseDto {
     example: true,
   })
   exists: boolean;
+}
+
+export class UpdateEmailPreferencesDto {
+  @ApiProperty({
+    description: 'Whether to receive session-related notifications',
+    example: true,
+    type: Boolean,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  emailSessionNotifications: boolean;
+
+  @ApiProperty({
+    description: 'Whether to receive club announcements',
+    example: true,
+    type: Boolean,
+  })
+  @IsBoolean()
+  @IsNotEmpty()
+  emailClubAnnouncements: boolean;
 }

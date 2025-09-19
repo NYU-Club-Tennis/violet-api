@@ -139,8 +139,11 @@ export class AuthController {
         phoneNumber,
         password,
         isAdmin: false,
+        isBanned: false,
         noShowCount: 0,
         membershipLevel: MembershipLevel.USER,
+        emailSessionNotifications: true,
+        emailClubAnnouncements: true,
       });
 
       const authUser = await this.authService.userLogin({

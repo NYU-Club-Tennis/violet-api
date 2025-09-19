@@ -50,6 +50,20 @@ export class UserService {
     });
   }
 
+  async findByEmails(emails: string[]) {
+    if (emails.length === 0) return [];
+
+    return this.usersRepository.find({
+      where: emails.map((email) => ({ email })),
+      select: {
+        id: true,
+        email: true,
+        emailSessionNotifications: true,
+        emailClubAnnouncements: true,
+      },
+    });
+  }
+
   async findById(id: number, relations: string[] = []) {
     return this.usersRepository.findOne({
       where: {
@@ -111,6 +125,15 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
+  async updateNoShowCount(id: number, count: number) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    user.noShowCount = count;
+    return this.usersRepository.save(user);
+  }
+
   async delete(id: number) {
     const user = await this.findById(id);
     if (!user) {
@@ -138,10 +161,15 @@ export class UserService {
         email: true,
         phoneNumber: true,
         isAdmin: true,
+        membershipLevel: true,
         noShowCount: true,
+        isBanned: true,
+        emailSessionNotifications: true,
+        emailClubAnnouncements: true,
         lastSignInAt: true,
         createdAt: true,
         updatedAt: true,
+        avatarUrl: true,
         // Exclude password from results
       },
     };
@@ -201,16 +229,38 @@ export class UserService {
     return this.usersRepository.save(user);
   }
 
-  async updateMembershipLevel(
-    userId: number,
-    membershipLevel: MembershipLevel,
-  ): Promise<User> {
-    const user = await this.findById(userId);
+  async updateMembershipLevel(id: number, membershipLevel: MembershipLevel) {
+    const user = await this.findById(id);
     if (!user) {
       throw new Error('User not found');
     }
 
     user.membershipLevel = membershipLevel;
+    return this.usersRepository.save(user);
+  }
+
+  async updateUserBanStatus(id: number, isBanned: boolean) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    user.isBanned = isBanned;
+    return this.usersRepository.save(user);
+  }
+
+  async updateEmailPreferences(
+    id: number,
+    emailSessionNotifications: boolean,
+    emailClubAnnouncements: boolean,
+  ) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    user.emailSessionNotifications = emailSessionNotifications;
+    user.emailClubAnnouncements = emailClubAnnouncements;
     return this.usersRepository.save(user);
   }
 

@@ -15,6 +15,7 @@ import {
 } from '../dto/registration.dto';
 import { Session } from '../../session/entities/session.entity';
 import { SessionStatus } from 'src/constants/enum/session.enum';
+import { MailService } from '../../mail/services/mail.service';
 
 @Injectable()
 export class RegistrationService {
@@ -24,6 +25,7 @@ export class RegistrationService {
     @InjectRepository(Session)
     private sessionRepository: Repository<Session>,
     private userService: UserService,
+    private mailService: MailService,
   ) {}
 
   private toResponseDto(registration: Registration): RegistrationResponseDto {
@@ -158,6 +160,22 @@ export class RegistrationService {
         newSpots: newSpotsAvailable,
         status: newSpotsAvailable === 0 ? SessionStatus.FULL : session.status,
       });
+    } else if (status === RegistrationStatus.WAITLISTED) {
+      // Send waitlist "added" email (respecting preferences in mail service)
+      const user = await this.userService.findById(userId);
+      if (user?.email) {
+        await this.mailService.sendWaitlistNotification(
+          'added',
+          user.email,
+          {
+            name: session.name,
+            date: session.date,
+            time: session.time,
+            location: session.location,
+          },
+          { position },
+        );
+      }
     }
 
     return this.toResponseDto(savedRegistration);
@@ -205,6 +223,23 @@ export class RegistrationService {
         nextInWaitlist.position = 0;
         nextInWaitlist.status = RegistrationStatus.REGISTERED;
         await this.registrationRepository.save(nextInWaitlist);
+
+        // Send waitlist "promoted" email
+        const promotedUser = await this.userService.findById(
+          nextInWaitlist.userId,
+        );
+        if (promotedUser?.email) {
+          await this.mailService.sendWaitlistNotification(
+            'promoted',
+            promotedUser.email,
+            {
+              name: session.name,
+              date: session.date,
+              time: session.time,
+              location: session.location,
+            },
+          );
+        }
 
         // Move everyone else up in the waitlist
         await this.registrationRepository
@@ -277,14 +312,25 @@ export class RegistrationService {
       ? RegistrationStatus.COMPLETED
       : RegistrationStatus.NO_SHOW;
 
-    // If marked as no-show, increment the user's no-show count
-    if (!hasAttended) {
-      await this.userService.incrementNoShowCount(registration.userId);
-    }
-
     const savedRegistration =
       await this.registrationRepository.save(registration);
+
+    // Recalculate the user's no-show count to ensure accuracy
+    await this.recalculateUserNoShowCount(registration.userId);
+
     return this.toResponseDto(savedRegistration);
+  }
+
+  private async recalculateUserNoShowCount(userId: number): Promise<void> {
+    const noShowCount = await this.registrationRepository.count({
+      where: {
+        userId,
+        status: RegistrationStatus.NO_SHOW,
+      },
+    });
+
+    // Update the user's no-show count
+    await this.userService.updateNoShowCount(userId, noShowCount);
   }
 
   async getRegistrationsBySession(
@@ -312,11 +358,13 @@ export class RegistrationService {
         status: In([
           RegistrationStatus.REGISTERED,
           RegistrationStatus.WAITLISTED,
+          RegistrationStatus.COMPLETED,
+          RegistrationStatus.NO_SHOW,
         ]),
       },
       relations: ['user'],
       order: {
-        status: 'ASC', // REGISTERED first, then WAITLISTED
+        status: 'ASC', // REGISTERED first, then others
         position: 'ASC', // Then by position
         createdAt: 'ASC', // Then by creation time
       },
