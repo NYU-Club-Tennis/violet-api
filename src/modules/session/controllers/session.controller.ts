@@ -208,18 +208,46 @@ export class SessionController {
     return this.sessionService.cancelSessionRegistration(+sessionId, userId);
   }
 
-  @Post('close-past-sessions')
+  @Post(':id/archive')
   @Roles(Role.ADMIN)
   @UseGuards(AuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Manually trigger closing of past sessions' })
+  @ApiOperation({ summary: 'Archive a session (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session archived',
+    type: SessionResponseDto,
+  })
+  async archive(@Param('id') id: string): Promise<Session> {
+    return this.sessionService.archive(+id);
+  }
+
+  @Post(':id/unarchive')
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unarchive a session (Admin only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Session unarchived',
+    type: SessionResponseDto,
+  })
+  async unarchive(@Param('id') id: string): Promise<Session> {
+    return this.sessionService.unarchive(+id);
+  }
+
+  @Post('archive-past-sessions')
+  @Roles(Role.ADMIN)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Manually trigger archiving of past sessions' })
   @ApiResponse({
     status: 200,
     description: 'Past sessions have been closed successfully',
     schema: {
       type: 'object',
       properties: {
-        closedCount: { type: 'number' },
+        archivedCount: { type: 'number' },
         message: { type: 'string' },
       },
     },
@@ -229,7 +257,10 @@ export class SessionController {
     status: 403,
     description: 'Forbidden - Requires admin access.',
   })
-  async closePastSessions(): Promise<{ closedCount: number; message: string }> {
-    return this.sessionService.closePastSessions();
+  async archivePastSessions(): Promise<{
+    archivedCount: number;
+    message: string;
+  }> {
+    return this.sessionService.autoArchivePastSessions();
   }
 }

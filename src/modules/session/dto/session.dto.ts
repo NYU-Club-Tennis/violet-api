@@ -99,6 +99,13 @@ export class SessionDTO implements ISession {
   notes?: string;
 
   @ApiProperty({
+    description: 'Whether the session is archived',
+    example: false,
+    type: Boolean,
+  })
+  isArchived: boolean;
+
+  @ApiProperty({
     description: 'Registrations for the session',
     type: () => [Registration],
   })
@@ -195,6 +202,15 @@ export class CreateSessionDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiProperty({
+    description: 'Whether the session is archived',
+    example: false,
+    type: Boolean,
+    required: false,
+  })
+  @IsOptional()
+  isArchived?: boolean;
 }
 
 export class UpdateSessionDto {
@@ -298,6 +314,15 @@ export class UpdateSessionDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty({
+    description: 'Whether the session is archived',
+    example: false,
+    type: Boolean,
+    required: false,
+  })
+  @IsOptional()
+  isArchived?: boolean;
 }
 
 export class SessionResponseDto extends CreateSessionDto {
@@ -395,6 +420,15 @@ export class SessionPaginateQueryRequestDTO implements ISessionPaginateQuery {
   @IsArray()
   @IsOptional()
   sortOptions: ISortOption[];
+
+  @ApiProperty({
+    description: 'Filter by archived sessions',
+    example: false,
+    type: Boolean,
+    required: false,
+  })
+  @IsOptional()
+  archived?: boolean;
 }
 
 export class SessionCountResponseDto {

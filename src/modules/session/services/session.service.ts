@@ -152,6 +152,18 @@ export class SessionService {
     return updatedSession;
   }
 
+  async archive(id: number): Promise<Session> {
+    const session = await this.findById(id);
+    session.isArchived = true;
+    return this.sessionRepository.save(session);
+  }
+
+  async unarchive(id: number): Promise<Session> {
+    const session = await this.findById(id);
+    session.isArchived = false;
+    return this.sessionRepository.save(session);
+  }
+
   /**
    * Send notification when session details are updated
    */
@@ -282,6 +294,7 @@ export class SessionService {
       date,
       hasSpots,
       sortOptions,
+      archived,
     } = query;
 
     const findOptions: FindManyOptions<Session> = {
@@ -300,6 +313,10 @@ export class SessionService {
     }
 
     const whereConditions: any = { deletedAt: IsNull() };
+
+    if (typeof archived === 'boolean') {
+      whereConditions.isArchived = archived;
+    }
 
     if (location) {
       whereConditions.location = location;
@@ -448,39 +465,39 @@ export class SessionService {
   }
 
   /**
-   * Automatically close past sessions by updating their status to CLOSED
+   * Automatically archive past sessions by setting isArchived to true
    * This method is designed to be called by a cron job
    */
-  async closePastSessions(): Promise<{ closedCount: number; message: string }> {
+  async autoArchivePastSessions(): Promise<{
+    archivedCount: number;
+    message: string;
+  }> {
     try {
       const now = new Date();
       const today = now.toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
 
-      // Find all open sessions that have passed their date
       const result = await this.sessionRepository
-        .createQueryBuilder('session')
-        .update()
-        .set({ status: SessionStatus.CLOSED })
-        .where('session.date < :today', { today })
-        .andWhere('session.status = :openStatus', {
-          openStatus: SessionStatus.OPEN,
-        })
-        .andWhere('deletedAt IS NULL')
+        .createQueryBuilder()
+        .update(Session)
+        .set({ isArchived: true })
+        .where('deletedAt IS NULL')
+        .andWhere('isArchived = :archived', { archived: false })
+        .andWhere('date < :today', { today })
         .execute();
 
-      const closedCount = result.affected || 0;
+      const archivedCount = result.affected || 0;
 
       console.log(
-        `Automatically closed ${closedCount} past sessions on ${today}`,
+        `Automatically archived ${archivedCount} past sessions on ${today}`,
       );
 
       return {
-        closedCount,
-        message: `Successfully closed ${closedCount} past sessions`,
+        archivedCount,
+        message: `Successfully archived ${archivedCount} past sessions`,
       };
     } catch (error) {
-      console.error('Error closing past sessions:', error);
-      throw new InternalServerErrorException('Failed to close past sessions');
+      console.error('Error auto-archiving past sessions:', error);
+      throw new InternalServerErrorException('Failed to archive past sessions');
     }
   }
 }

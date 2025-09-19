@@ -50,6 +50,9 @@ export class Session extends BaseEntity implements ISession {
   })
   notes: string;
 
+  @Column({ default: false })
+  isArchived: boolean;
+
   @OneToMany(() => Registration, (registration) => registration.session)
   registrations: Registration[];
 }
