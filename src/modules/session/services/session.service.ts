@@ -171,6 +171,10 @@ export class SessionService {
     session: Session,
     changes: Partial<ISession>,
   ): Promise<void> {
+    // Do not notify if the session is archived
+    if (session.isArchived) {
+      return;
+    }
     try {
       // Get registered users for this session
       const registrations = await this.registrationRepository.find({
@@ -378,6 +382,7 @@ export class SessionService {
     const count = await this.sessionRepository.count({
       where: {
         status: SessionStatus.OPEN,
+        isArchived: false,
         deletedAt: IsNull(),
       },
     });
