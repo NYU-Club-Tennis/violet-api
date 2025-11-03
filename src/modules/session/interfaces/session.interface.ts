@@ -18,6 +18,7 @@ export interface ISession extends IBaseEntity {
   spotsTotal: number;
   status: SessionStatus;
   notes?: string;
+  isArchived: boolean;
   registrations: Registration[];
 }
 
@@ -41,6 +42,7 @@ export interface ISessionPaginateQuery extends IPaginateQuery {
   skillLevels?: SkillLevel[];
   date?: string;
   hasSpots?: boolean;
+  archived?: boolean;
 }
 
 export interface ISessionCountResponse {
