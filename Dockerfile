@@ -1,5 +1,5 @@
-# Use Node.js 21 (Latest with full support for your dependencies)
-FROM node:21-alpine
+# Use Node.js 20 LTS to maintain compatibility with transitive deps (e.g. jwa)
+FROM node:20-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
