@@ -24,12 +24,26 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
   app.enableCors({
-    origin: [
-      'https://nyuclubtennis-dev.vercel.app',
-      'https://nyuclubtennis.vercel.app',
-      'http://localhost:5173',
-      'http://localhost:3000',
-    ],
+    origin: (origin, callback) => {
+      const allowlist = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://nyuclubtennis-dev.vercel.app',
+        'https://nyuclubtennis.vercel.app',
+      ];
+
+      // Allow server-to-server and curl (no origin)
+      if (!origin) return callback(null, true);
+
+      // Allow any vercel.app preview deployment for this project
+      const isVercel = /https?:\/\/.*\.vercel\.app$/.test(origin);
+
+      if (allowlist.includes(origin) || isVercel) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: 'GET,PUT,PATCH,POST,DELETE',
     exposedHeaders: ['Content-Disposition', 'Retry-After'],
     credentials: true,
