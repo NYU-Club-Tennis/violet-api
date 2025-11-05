@@ -155,6 +155,8 @@ export class SessionService {
   async archive(id: number): Promise<Session> {
     const session = await this.findById(id);
     session.isArchived = true;
+    session.status = SessionStatus.CLOSED;
+    session.spotsAvailable = 0;
     return this.sessionRepository.save(session);
   }
 
@@ -484,7 +486,11 @@ export class SessionService {
       const result = await this.sessionRepository
         .createQueryBuilder()
         .update(Session)
-        .set({ isArchived: true })
+        .set({
+          isArchived: true,
+          status: SessionStatus.CLOSED,
+          spotsAvailable: 0,
+        })
         .where('deletedAt IS NULL')
         .andWhere('isArchived = :archived', { archived: false })
         .andWhere('date < :today', { today })
