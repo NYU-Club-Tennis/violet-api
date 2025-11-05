@@ -64,6 +64,17 @@ export class RegistrationService {
     userId: number,
     sessionId: number,
   ): Promise<RegistrationResponseDto> {
+    // Ensure user exists and is allowed to register
+    const user = await this.userService.findById(userId);
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    if (user.isBanned) {
+      throw new BadRequestException(
+        'User is banned from registering for sessions',
+      );
+    }
+
     // Check if session exists and get its capacity info
     const session = await this.sessionRepository.findOne({
       where: { id: sessionId },
@@ -204,20 +215,27 @@ export class RegistrationService {
       console.log(`Cancelling active registration for session ${session.id}`);
 
       // Find the first person in waitlist
-      const nextInWaitlist = await this.registrationRepository.findOne({
-        where: {
+      // Find the first non-banned user in the waitlist
+      const nextInWaitlist = await this.registrationRepository
+        .createQueryBuilder('registration')
+        .innerJoin('registration.user', 'user')
+        .where('registration.sessionId = :sessionId', {
           sessionId: registration.sessionId,
+        })
+        .andWhere('registration.status = :status', {
           status: RegistrationStatus.WAITLISTED,
-        },
-        order: {
-          position: 'ASC',
-        },
-      });
+        })
+        .andWhere('user.isBanned = false')
+        .orderBy('registration.position', 'ASC')
+        .getOne();
 
       if (nextInWaitlist) {
         console.log(
           `Moving user ${nextInWaitlist.userId} from waitlist to registered`,
         );
+
+        // Capture the previous waitlist position before promotion
+        const previousWaitlistPosition = nextInWaitlist.position;
 
         // Move them to registered status
         nextInWaitlist.position = 0;
@@ -240,8 +258,7 @@ export class RegistrationService {
             },
           );
         }
-
-        // Move everyone else up in the waitlist
+        // Move everyone else up in the waitlist (compact positions)
         await this.registrationRepository
           .createQueryBuilder()
           .update(Registration)
@@ -255,7 +272,7 @@ export class RegistrationService {
             status: RegistrationStatus.WAITLISTED,
           })
           .andWhere('position > :position', {
-            position: nextInWaitlist.position,
+            position: previousWaitlistPosition,
           })
           .execute();
       } else {
@@ -266,6 +283,18 @@ export class RegistrationService {
           status: SessionStatus.OPEN,
         });
       }
+    }
+
+    // If removing a waitlisted registration, compact positions below it
+    if (registration.status === RegistrationStatus.WAITLISTED) {
+      await this.registrationRepository
+        .createQueryBuilder()
+        .update(Registration)
+        .set({ position: () => 'position - 1' })
+        .where('sessionId = :sessionId', { sessionId: registration.sessionId })
+        .andWhere('status = :status', { status: RegistrationStatus.WAITLISTED })
+        .andWhere('position > :position', { position: registration.position })
+        .execute();
     }
 
     // Set cancellation metadata

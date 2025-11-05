@@ -155,6 +155,8 @@ export class SessionService {
   async archive(id: number): Promise<Session> {
     const session = await this.findById(id);
     session.isArchived = true;
+    session.status = SessionStatus.CLOSED;
+    session.spotsAvailable = 0;
     return this.sessionRepository.save(session);
   }
 
@@ -215,7 +217,11 @@ export class SessionService {
           notificationBody = `The session "${session.name}" has been updated:\n\n`;
         }
         if (changes.date) {
-          notificationBody += `New Date: ${new Date(changes.date).toLocaleDateString()}\n`;
+          // Format as MMM D, YYYY without timezone shift
+          const formatted = require('dayjs')(`${changes.date}T00:00`).format(
+            'MMM D, YYYY',
+          );
+          notificationBody += `New Date: ${formatted}\n`;
         }
         if (changes.time) {
           notificationBody += `New Time: ${changes.time}\n`;
@@ -274,7 +280,9 @@ export class SessionService {
         .filter(Boolean) as string[];
 
       const subject = 'Session Cancelled';
-      const body = `The session "${session.name}" scheduled for ${new Date(session.date).toLocaleDateString()} at ${session.time} has been cancelled.\n\nWe apologize for any inconvenience.`;
+      const dayjs = require('dayjs');
+      const formatted = dayjs(`${session.date}T00:00`).format('MMM D, YYYY');
+      const body = `The session "${session.name}" scheduled for ${formatted} at ${session.time} has been cancelled.\n\nWe apologize for any inconvenience.`;
 
       if (userEmails.length > 0) {
         await this.mailService.sendSessionNotification(
@@ -484,7 +492,11 @@ export class SessionService {
       const result = await this.sessionRepository
         .createQueryBuilder()
         .update(Session)
-        .set({ isArchived: true })
+        .set({
+          isArchived: true,
+          status: SessionStatus.CLOSED,
+          spotsAvailable: 0,
+        })
         .where('deletedAt IS NULL')
         .andWhere('isArchived = :archived', { archived: false })
         .andWhere('date < :today', { today })
